@@ -9,11 +9,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-# ניסיון ייבוא המפתח מקובץ constants.py
+# ייבוא המפתח מקובץ constants.py
 try:
     from constants import RAW_KEY
 except ImportError:
-    st.error("קובץ constants.py חסר! צור קובץ בשם constants.py עם השורה: RAW_KEY = '...' ")
+    st.error("קובץ constants.py חסר! וודא שיצרת אותו עם המשתנה RAW_KEY")
     st.stop()
 
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
@@ -25,7 +25,7 @@ FOLDER_ID_IMAGES = "1pIz-PszCqheMiTyBvDMvJdtpBbt1vRet"
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
-# --- עיצוב CSS מתוקן ---
+# --- עיצוב CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -38,15 +38,11 @@ st.markdown("""
         padding: 10px 20px !important;
     }
 
-    /* תיקון קוביות המוצר - גובה גמיש ותצוגה יציבה לתמונות */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-        background-color: white; padding: 15px !important; 
-        position: relative;
+        background-color: white; padding: 15px !important;
         min-height: auto !important;
-        max-height: none !important;
-        overflow: visible !important;
         display: block !important;
     }
     
@@ -105,13 +101,13 @@ def extract_materials(full_text):
     if 'bamboo' in text_lower: materials.append('Bamboo')
     return list(set(materials))
 
-def transform_he_to_en(text):
-    he_en_map = {'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g', 'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n', 'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u', 'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y'}
-    return "".join([he_en_map.get(char, char) for char in text.lower()])
-
 def normalize_text(text):
     if not isinstance(text, str): text = str(text)
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
+
+def transform_he_to_en(text):
+    he_en_map = {'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g', 'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n', 'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u', 'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y'}
+    return "".join([he_en_map.get(char, char) for char in text.lower()])
 
 def get_gdrive_service():
     try:
@@ -125,13 +121,14 @@ def get_gdrive_service():
         return None
 
 @st.cache_data(ttl=3600)
-def get_image_base64(_service, file_id):
+def get_image_bytes(_service, file_id):
     try:
         request = _service.files().get_media(fileId=file_id)
-        fh = io.BytesIO(); downloader = MediaIoBaseDownload(fh, request)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
         done = False
         while not done: _, done = downloader.next_chunk()
-        return base64.b64encode(fh.getvalue()).decode('utf-8')
+        return fh.getvalue()
     except: return None
 
 @st.cache_data(ttl=600)
@@ -183,7 +180,7 @@ def load_all_data():
 
 df, img_map = load_all_data()
 
-# --- ממשק ---
+# --- תפריט צד ---
 with st.sidebar:
     st.header("⚙️ סינון חכם")
     price_min, price_max = st.slider("טווח מחיר (USD)", 0.0, 30.0, (0.0, 30.0), 0.1)
@@ -200,12 +197,26 @@ with st.sidebar:
     st.header("🛒 סל מוצרים")
     if st.session_state.selected_items:
         st.success(f"נבחרו {len(st.session_state.selected_items)} מוצרים")
+        
+        # יצירת תוכן המייל
+        email_body = "שלום,\n\nאשמח לקבל הצעה עבור המוצרים הבאים:\n\n"
+        for item_id, item_data in st.session_state.selected_items.items():
+            email_body += f"--- {item_data['item_key']} ---\n"
+            for detail in item_data['display_list']:
+                 if not contains_chinese(detail): email_body += f"• {detail}\n"
+            email_body += "\n"
+        
+        encoded_subject = urllib.parse.quote("Next Design - בקשה להצעת מחיר")
+        encoded_body = urllib.parse.quote(email_body)
+        st.markdown(f'<a href="mailto:?subject={encoded_subject}&body={encoded_body}" class="email-btn" target="_blank">✉️ שלח במייל לסוכן</a>', unsafe_allow_html=True)
+        
         if st.button("🗑️ נקה סל"):
             st.session_state.selected_items = {}
             st.rerun()
 
+# --- חיפוש ותצוגה ---
 st.markdown('<h1 style="text-align:center;">NEXT DESIGN</h1>', unsafe_allow_html=True)
-search_input = st.text_input("", placeholder="🔍 (Bottle למשל) חפש מוצר...")
+search_input = st.text_input("", placeholder="🔍 חפש מוצר...")
 
 if not df.empty and search_input:
     service = get_gdrive_service()
@@ -238,10 +249,12 @@ if not df.empty and search_input:
                     elif unique_id in st.session_state.selected_items:
                         del st.session_state.selected_items[unique_id]
                     
+                    # הצגת תמונה דרך הפונקציה המובנית של Streamlit (הכי יציב)
                     img_id = img_map.get(row['base_filename'] + ".jpg") or img_map.get(row['base_filename'] + ".png")
                     if img_id:
-                        b64 = get_image_base64(service, img_id)
-                        if b64: st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; height:220px; object-fit:contain; border-radius:8px; margin-bottom:10px;">', unsafe_allow_html=True)
+                        img_bytes = get_image_bytes(service, img_id)
+                        if img_bytes:
+                            st.image(img_bytes, use_container_width=True)
                     
                     st.write(f"**{row['item_key']}**")
                     tags = ""
@@ -251,7 +264,6 @@ if not df.empty and search_input:
                     
                     for detail in row['display_list']:
                         d_up = detail.upper()
-                        # סינון כפילויות של מידע שכבר מופיע למעלה או מידע לא רלוונטי
                         if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'ITEM:', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
                             if 'USD' in d_up: st.write(f"💰 **{detail}**")
                             elif 'DELIVERY' in d_up or 'DAYS' in d_up: st.write(f"🚚 <small>{detail}</small>", unsafe_allow_html=True)
