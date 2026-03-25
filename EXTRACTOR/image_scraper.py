@@ -24,27 +24,25 @@ def get_service():
     return build('drive', 'v3', credentials=creds)
 
 def extract_images_from_xls(file_content):
-    """חילוץ תמונות מקובץ XLS ישן בשיטה הקלאסית"""
+    """חילוץ תמונות מ-XLS ישן בשיטת ה-COLAB המוכחת"""
     import xlrd
     images = []
     try:
-        # פתיחת הספר עם מידע על פורמט ותמונות
+        # פתיחה עם formatting_info חובה לזיהוי אובייקטים
         book = xlrd.open_workbook(file_contents=file_content, formatting_info=True)
-        # בפורמט XLS, התמונות שמורות בזיכרון של הספר תחת המאפיין biff_records
-        for sheet_idx in range(book.nsheets):
-            sheet = book.sheet_by_index(sheet_idx)
-            # חיפוש תמונות ב-drawing records של ה-sheet
-            if hasattr(book, 'handle_shared_resources'):
-                for biff_record in book.biff_records:
-                    # קוד 0x01B6 או 0x00EB הם בדרך כלל רשומות של תמונות (MSODRAWING)
-                    if biff_record[0] in [0x01B6, 0x00EB, 0x00E0]:
-                        try:
-                            img = Image.open(io.BytesIO(biff_record[1]))
-                            images.append(img)
-                        except:
-                            continue
+        # שאיבה ישירה של ה-Bitmaps מה-BIFF records
+        for biff_record in book.biff_records:
+            # 0x00E0/0x01B6 הם הקודים לתמונות מוטמעות (MSODRAWING)
+            if biff_record[0] in [0x00E0, 0x01B6, 0x00EB]:
+                try:
+                    data = biff_record[1]
+                    # ניסיון פענוח ישיר כ-Image
+                    img = Image.open(io.BytesIO(data))
+                    images.append(img)
+                except:
+                    continue
     except Exception as e:
-        print(f"  ⚠️ שגיאת XLS פנימית: {e}")
+        print(f"  ⚠️ ניסיון חילוץ XLS נכשל: {e}")
     return images
 
 def process_excels():
@@ -52,9 +50,11 @@ def process_excels():
     service = get_service()
     if not service: return
     
+    # 1. משיכת רשימת התמונות הקיימות
     results = service.files().list(q=f"'{FOLDER_ID_IMAGES}' in parents", fields="files(name)").execute()
     existing_imgs = [f['name'].lower() for f in results.get('files', [])]
 
+    # 2. משיכת קבצי האקסל
     results = service.files().list(q=f"'{FOLDER_ID_EXCELS}' in parents", fields="files(id, name)").execute()
     excels = results.get('files', [])
 
@@ -63,11 +63,12 @@ def process_excels():
         file_id = excel['id']
         base_name = file_name.rsplit('.', 1)[0]
         
+        # דילוג על מה שכבר קיים
         if any(base_name.lower() in n for n in existing_imgs):
-            print(f"✅ '{file_name}' כבר קיים. מדלג...")
+            print(f"✅ '{file_name}' כבר עובד. מדלג...")
             continue
             
-        print(f"🔄 שואב תמונות מתוך: {file_name}")
+        print(f"🔄 רובוט COLAB שואב מתוך: {file_name}")
         
         try:
             request = service.files().get_media(fileId=file_id)
@@ -79,11 +80,11 @@ def process_excels():
             
             found_images = []
 
-            # טיפול ב-XLS ישן (כמו הקבצים ששלחת עכשיו)
+            # שאיבת XLS ישן
             if file_name.lower().endswith('.xls'):
                 found_images = extract_images_from_xls(content)
-                
-            # טיפול ב-XLSX חדש
+            
+            # שאיבת XLSX חדש
             elif file_name.lower().endswith('.xlsx'):
                 import zipfile
                 with zipfile.ZipFile(io.BytesIO(content)) as z:
@@ -102,7 +103,7 @@ def process_excels():
                     img.save(tmp.name)
                     media = MediaFileUpload(tmp.name, resumable=True)
                     service.files().create(body={'name': new_img_name, 'parents': [FOLDER_ID_IMAGES]}, media_body=media).execute()
-                print(f"  📸 הועלתה: {new_img_name}")
+                print(f"  📸 הצלחה! חולצה תמונה: {new_img_name}")
                 
         except Exception as e:
             print(f"❌ שגיאה ב-{file_name}: {e}")
