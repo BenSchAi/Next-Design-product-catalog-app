@@ -9,7 +9,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-# ניסיון ייבוא המפתח
+# ניסיון ייבוא המפתח מקובץ constants.py
 try:
     from constants import RAW_KEY
 except ImportError:
@@ -18,14 +18,14 @@ except ImportError:
 
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
 
-# --- הגדרות קבועות (היו חסרות וגרמו לשגיאה) ---
+# --- הגדרות קבועות ---
 FOLDER_ID_EXCELS = "1em5nttKDkBs86VgrknaKjhdNi_XBITCK"
 FOLDER_ID_IMAGES = "1pIz-PszCqheMiTyBvDMvJdtpBbt1vRet"
 
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
-# --- עיצוב CSS ---
+# --- עיצוב CSS מתוקן ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -38,15 +38,18 @@ st.markdown("""
         padding: 10px 20px !important;
     }
 
-   div[data-testid="stVerticalBlock"] > div[style*="border"] {
+    /* תיקון קוביות המוצר - גובה גמיש ותצוגה יציבה לתמונות */
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-        background-color: white; padding: 15px !important; position: relative;
+        background-color: white; padding: 15px !important; 
+        position: relative;
         min-height: auto !important;
         max-height: none !important;
         overflow: visible !important;
+        display: block !important;
     }
-
+    
     .email-btn {
         display: block; width: 100%; text-align: center; background-color: #27ae60;
         color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
@@ -110,7 +113,6 @@ def normalize_text(text):
     if not isinstance(text, str): text = str(text)
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
 
-# --- חיבור לגוגל ---
 def get_gdrive_service():
     try:
         encoded_key = re.sub(r'[^A-Za-z0-9+/=]', '', RAW_KEY)
@@ -203,7 +205,7 @@ with st.sidebar:
             st.rerun()
 
 st.markdown('<h1 style="text-align:center;">NEXT DESIGN</h1>', unsafe_allow_html=True)
-search_input = st.text_input("", placeholder="🔍 חפש מוצר...")
+search_input = st.text_input("", placeholder="🔍 (Bottle למשל) חפש מוצר...")
 
 if not df.empty and search_input:
     service = get_gdrive_service()
@@ -249,7 +251,8 @@ if not df.empty and search_input:
                     
                     for detail in row['display_list']:
                         d_up = detail.upper()
-                        if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
+                        # סינון כפילויות של מידע שכבר מופיע למעלה או מידע לא רלוונטי
+                        if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'ITEM:', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
                             if 'USD' in d_up: st.write(f"💰 **{detail}**")
                             elif 'DELIVERY' in d_up or 'DAYS' in d_up: st.write(f"🚚 <small>{detail}</small>", unsafe_allow_html=True)
                             else: st.write(f"<small>• {detail}</small>", unsafe_allow_html=True)
