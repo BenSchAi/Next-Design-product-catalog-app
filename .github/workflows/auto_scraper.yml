@@ -1,0 +1,26 @@
+name: Auto Image Scraper Robot
+
+on:
+  schedule:
+    - cron: '0 * * * *' # הרובוט ירוץ אוטומטית פעם בשעה
+  workflow_dispatch: # כפתור להפעלה ידנית
+
+jobs:
+  scrape_images:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Dependencies
+      run: |
+        pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib pandas
+
+    - name: Run the Scraper Robot
+      run: python EXTRACTOR/image_scraper.py
