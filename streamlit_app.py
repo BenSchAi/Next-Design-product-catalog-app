@@ -9,43 +9,32 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-# ייבוא המפתח מהקובץ הנפרד שיצרת
+# ייבוא המפתח מקובץ constants.py
 try:
     from constants import RAW_KEY
 except ImportError:
-    st.error("שגיאה: קובץ constants.py לא נמצא. אנא צור אותו עם המפתח שלך.")
+    st.error("קובץ constants.py לא נמצא. וודא שיצרת אותו עם המשתנה RAW_KEY")
     st.stop()
 
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
 
-# --- הגדרות קבועות ---
-FOLDER_ID_EXCELS = "1em5nttKDkBs86VgrknaKjhdNi_XBITCK"
-FOLDER_ID_IMAGES = "1pIz-PszCqheMiTyBvDMvJdtpBbt1vRet"
-
-if 'selected_items' not in st.session_state:
-    st.session_state.selected_items = {}
-
-# --- עיצוב CSS מתוקן (גובה גמיש לתמונות) ---
+# --- עיצוב CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
-    
     .stTextInput > div > div > input {
         border-radius: 30px !important; border: 2px solid #eaeaea !important;
-        padding: 15px 20px !important; font-size: 16px !important;
+        padding: 15px 20px !important;
     }
-
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-        background-color: white; padding: 15px !important; 
+        background-color: white; padding: 15px !important;
         min-height: auto !important;
         display: block !important;
     }
-    
     .email-btn {
         display: block; width: 100%; text-align: center; background-color: #27ae60;
         color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
@@ -78,6 +67,29 @@ def extract_moq(details_list):
             if nums: return int(nums[0])
     return None
 
+def extract_delivery_days(details_list):
+    for detail in details_list:
+        d_up = detail.upper()
+        if 'DELIVERY' in d_up or 'DAYS' in d_up or 'LEAD TIME' in d_up:
+            if 'SAMPLE' not in d_up:
+                nums = re.findall(r'\d+', detail)
+                if nums: return max([int(n) for n in nums])
+    return None
+
+def extract_capacity(full_text):
+    matches = re.findall(r'(\d{2,4})\s*(ml|oz)', full_text.lower())
+    if matches: return f"{matches[0][0]}{matches[0][1]}"
+    return None
+
+def extract_materials(full_text):
+    materials = []
+    text_lower = full_text.lower()
+    if 'stainless' in text_lower or '304' in text_lower: materials.append('Stainless Steel')
+    if 'plastic' in text_lower or 'pp' in text_lower: materials.append('Plastic')
+    if 'glass' in text_lower: materials.append('Glass')
+    if 'bamboo' in text_lower: materials.append('Bamboo')
+    return list(set(materials))
+
 def normalize_text(text):
     if not isinstance(text, str): text = str(text)
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
@@ -85,7 +97,6 @@ def normalize_text(text):
 # --- חיבור לגוגל ---
 def get_gdrive_service():
     try:
-        # ניקוי המפתח שהגיע מהקובץ החיצוני
         encoded_key = re.sub(r'[^A-Za-z0-9+/=]', '', RAW_KEY)
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
         info = json.loads(decoded_key)
@@ -124,7 +135,7 @@ def load_all_data():
                 if any(k in row_str.upper() for k in ['ITEM NO', 'ITEM REF', 'ITEM:', 'DESCRIPTION']):
                     details = []
                     item_key = ""
-                    for offset in range(15):
+                    for offset in range(25):
                         curr_idx = idx + offset
                         if curr_idx >= len(df_excel): break
                         line = " ".join(df_excel.iloc[curr_idx].dropna().astype(str)).strip()
@@ -132,14 +143,20 @@ def load_all_data():
                             details.append(line)
                             if 'ITEM' in line.upper() and not item_key: item_key = line
                     if details:
+                        full_text_str = " ".join(details)
                         all_products.append({
                             'item_key': item_key if item_key else details[0],
                             'display_list': details,
-                            'normalized_text': normalize_text(" ".join(details)),
+                            'full_text': full_text_str,
+                            'normalized_text': normalize_text(full_text_str),
+                            'file_source': item['name'],
                             'base_filename': item['name'].rsplit('.', 1)[0],
                             'row_index': idx,
                             'min_price': extract_min_price(details),
-                            'moq': extract_moq(details)
+                            'moq': extract_moq(details),
+                            'delivery_days': extract_delivery_days(details),
+                            'capacity': extract_capacity(full_text_str),
+                            'materials': extract_materials(full_text_str)
                         })
         except: continue
     img_results = service.files().list(q=f"'{FOLDER_ID_IMAGES}' in parents", fields="files(id, name)").execute()
@@ -148,17 +165,31 @@ def load_all_data():
 
 df, img_map = load_all_data()
 
-# --- ממשק ---
+# --- תפריט צד (עם כל הפילטרים) ---
+if 'selected_items' not in st.session_state:
+    st.session_state.selected_items = {}
+
 with st.sidebar:
     st.header("⚙️ סינון חכם")
+    price_min, price_max = st.slider("טווח מחיר (USD)", 0.0, 30.0, (0.0, 30.0), 0.1)
     max_moq = st.number_input("MOQ מקסימלי (0 = הכל)", value=0, min_value=0)
+    max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", 5, 90, 90, 5)
+    
+    available_materials = ["Stainless Steel", "Plastic", "Bamboo", "Glass"]
+    selected_materials = st.multiselect("חומר", available_materials)
+    
+    available_capacities = sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
+    selected_capacities = st.multiselect("נפח (Capacity)", available_capacities)
+    
     st.divider()
+    st.header("🛒 סל מוצרים")
     if st.session_state.selected_items:
         st.success(f"נבחרו {len(st.session_state.selected_items)} מוצרים")
         if st.button("🗑️ נקה סל"):
             st.session_state.selected_items = {}
             st.rerun()
 
+# --- חיפוש ותצוגה ---
 st.markdown('<h1 style="text-align:center;">NEXT DESIGN</h1>', unsafe_allow_html=True)
 search_input = st.text_input("", placeholder="🔍 חפש מוצר...")
 
@@ -167,8 +198,18 @@ if not df.empty and search_input:
     term = normalize_text(search_input)
     results = df[df['normalized_text'].str.contains(term, na=False)].copy()
     
-    if max_moq > 0:
-        results = results[results['moq'].apply(lambda x: x is not None and x <= max_moq)]
+    if not results.empty:
+        # הפעלת פילטרים
+        if price_min > 0.0 or price_max < 30.0:
+            results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
+        if max_moq > 0:
+            results = results[results['moq'].apply(lambda x: x is not None and x <= max_moq)]
+        if max_delivery < 90:
+            results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
+        if selected_materials:
+            results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
+        if selected_capacities:
+            results = results[results['capacity'].isin(selected_capacities)]
 
     if not results.empty:
         results = results.drop_duplicates(subset=['item_key'])
@@ -183,13 +224,18 @@ if not df.empty and search_input:
                     img_id = img_map.get(row['base_filename'] + ".jpg") or img_map.get(row['base_filename'] + ".png")
                     if img_id:
                         b64 = get_image_base64(service, img_id)
-                        if b64: st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; height:200px; object-fit:contain; border-radius:8px; margin-bottom:10px;">', unsafe_allow_html=True)
+                        if b64: st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; height:220px; object-fit:contain; border-radius:8px; margin-bottom:10px;">', unsafe_allow_html=True)
                     
                     st.write(f"**{row['item_key']}**")
-                    if row['moq']: st.markdown(f"<span style='background:#f1c40f; padding:2px 5px; border-radius:4px; font-size:11px;'>📦 MOQ: {row['moq']}</span>", unsafe_allow_html=True)
+                    tags = ""
+                    if row['moq']: tags += f"<span style='background:#f1c40f; padding:2px 5px; border-radius:4px; font-size:11px;'>📦 MOQ: {row['moq']}</span> "
+                    if row['capacity']: tags += f"<span style='background:#eee; padding:2px 5px; border-radius:4px; font-size:11px;'>💧 {row['capacity']}</span>"
+                    st.markdown(tags, unsafe_allow_html=True)
                     
                     for detail in row['display_list']:
                         d_up = detail.upper()
+                        # סינון כפילויות ושורות מיותרות
                         if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
                             if 'USD' in d_up: st.write(f"💰 **{detail}**")
+                            elif 'DELIVERY' in d_up or 'DAYS' in d_up: st.write(f"🚚 <small>{detail}</small>", unsafe_allow_html=True)
                             else: st.write(f"<small>• {detail}</small>", unsafe_allow_html=True)
