@@ -23,26 +23,42 @@ def get_service():
     creds = service_account.Credentials.from_service_account_info(info)
     return build('drive', 'v3', credentials=creds)
 
-def extract_images_from_xls(file_content):
-    """חילוץ תמונות מ-XLS ישן בשיטת ה-COLAB המוכחת"""
-    import xlrd
+def extract_images_from_binary(content):
+    """נשק יום הדין: סורק את הביטים של הקובץ ומחלץ תמונות בכוח, עוקף כל תלות בספריית אקסל"""
     images = []
-    try:
-        # פתיחה עם formatting_info חובה לזיהוי אובייקטים
-        book = xlrd.open_workbook(file_contents=file_content, formatting_info=True)
-        # שאיבה ישירה של ה-Bitmaps מה-BIFF records
-        for biff_record in book.biff_records:
-            # 0x00E0/0x01B6 הם הקודים לתמונות מוטמעות (MSODRAWING)
-            if biff_record[0] in [0x00E0, 0x01B6, 0x00EB]:
-                try:
-                    data = biff_record[1]
-                    # ניסיון פענוח ישיר כ-Image
-                    img = Image.open(io.BytesIO(data))
-                    images.append(img)
-                except:
-                    continue
-    except Exception as e:
-        print(f"  ⚠️ ניסיון חילוץ XLS נכשל: {e}")
+    
+    # חיפוש חתימות דיגיטליות של תמונות JPEG
+    idx = 0
+    while True:
+        idx = content.find(b'\xff\xd8\xff', idx)
+        if idx == -1: break
+        # חותך בלוק גדול מתוך הקובץ (מכיל את התמונה)
+        chunk = content[idx:idx+10000000]
+        try:
+            img = Image.open(io.BytesIO(chunk))
+            img.load() # מוודא שהתמונה תקינה
+            # מסנן אייקונים זעירים של אקסל
+            if img.width > 50 and img.height > 50:
+                images.append(img.copy())
+            idx += 1000 # מדלג קדימה כדי לא לחתוך את אותה תמונה שוב
+        except:
+            idx += 3
+
+    # חיפוש חתימות דיגיטליות של תמונות PNG
+    idx = 0
+    while True:
+        idx = content.find(b'\x89PNG\r\n\x1a\n', idx)
+        if idx == -1: break
+        chunk = content[idx:idx+10000000]
+        try:
+            img = Image.open(io.BytesIO(chunk))
+            img.load()
+            if img.width > 50 and img.height > 50:
+                images.append(img.copy())
+            idx += 1000
+        except:
+            idx += 8
+            
     return images
 
 def process_excels():
@@ -50,11 +66,9 @@ def process_excels():
     service = get_service()
     if not service: return
     
-    # 1. משיכת רשימת התמונות הקיימות
     results = service.files().list(q=f"'{FOLDER_ID_IMAGES}' in parents", fields="files(name)").execute()
     existing_imgs = [f['name'].lower() for f in results.get('files', [])]
 
-    # 2. משיכת קבצי האקסל
     results = service.files().list(q=f"'{FOLDER_ID_EXCELS}' in parents", fields="files(id, name)").execute()
     excels = results.get('files', [])
 
@@ -63,12 +77,11 @@ def process_excels():
         file_id = excel['id']
         base_name = file_name.rsplit('.', 1)[0]
         
-        # דילוג על מה שכבר קיים
         if any(base_name.lower() in n for n in existing_imgs):
-            print(f"✅ '{file_name}' כבר עובד. מדלג...")
+            print(f"✅ '{file_name}' כבר קיים. מדלג...")
             continue
             
-        print(f"🔄 רובוט COLAB שואב מתוך: {file_name}")
+        print(f"🔄 גלאי מתכות מופעל על הקובץ: {file_name}")
         
         try:
             request = service.files().get_media(fileId=file_id)
@@ -80,17 +93,20 @@ def process_excels():
             
             found_images = []
 
-            # שאיבת XLS ישן
-            if file_name.lower().endswith('.xls'):
-                found_images = extract_images_from_xls(content)
+            # אם זה קובץ XLSX חדש, נשתמש בשיטה הבטוחה של ה-ZIP
+            if file_name.lower().endswith('.xlsx'):
+                try:
+                    import zipfile
+                    with zipfile.ZipFile(io.BytesIO(content)) as z:
+                        media_files = [f for f in z.namelist() if f.startswith('xl/media/')]
+                        for mf in media_files:
+                            found_images.append(Image.open(io.BytesIO(z.read(mf))))
+                except:
+                    pass
             
-            # שאיבת XLSX חדש
-            elif file_name.lower().endswith('.xlsx'):
-                import zipfile
-                with zipfile.ZipFile(io.BytesIO(content)) as z:
-                    media_files = [f for f in z.namelist() if f.startswith('xl/media/')]
-                    for mf in media_files:
-                        found_images.append(Image.open(io.BytesIO(z.read(mf))))
+            # אם זה XLS ישן (או שהראשון כשל), נפעיל את חולץ הביטים!
+            if not found_images:
+                found_images = extract_images_from_binary(content)
 
             if not found_images:
                 print(f"⚠️ לא נמצאו תמונות ב-{file_name}")
@@ -98,12 +114,13 @@ def process_excels():
                 
             for idx, img in enumerate(found_images):
                 ext = img.format.lower() if img.format else "png"
+                if ext == 'jpeg': ext = 'jpg'
                 new_img_name = f"{base_name}_row_{idx}.{ext}"
                 with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
                     img.save(tmp.name)
                     media = MediaFileUpload(tmp.name, resumable=True)
                     service.files().create(body={'name': new_img_name, 'parents': [FOLDER_ID_IMAGES]}, media_body=media).execute()
-                print(f"  📸 הצלחה! חולצה תמונה: {new_img_name}")
+                print(f"  📸 הצלחה! תמונה חולצה מהביטים: {new_img_name}")
                 
         except Exception as e:
             print(f"❌ שגיאה ב-{file_name}: {e}")
