@@ -38,12 +38,15 @@ st.markdown("""
         padding: 10px 20px !important;
     }
 
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {
+   div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
-        background-color: white; padding: 15px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
+        background-color: white; padding: 15px !important; position: relative;
         min-height: auto !important;
-        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
+
     .email-btn {
         display: block; width: 100%; text-align: center; background-color: #27ae60;
         color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
