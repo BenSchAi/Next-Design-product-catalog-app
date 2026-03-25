@@ -1,19 +1,20 @@
 import streamlit as st
 import time
 
-# 1. הגדרות עמוד (חייב להיות ראשון)
+# 1. הגדרות עמוד (חובה שיופיעו ראשונות)
 st.set_page_config(
     page_title="NEXT DESIGN | Premium Access", 
     layout="wide", 
     initial_sidebar_state="collapsed"
 )
 
-# 2. יצירת מיכל (Placeholder) למסך הכניסה
+# 2. יצירת מיכל ריק שיכיל את כל דף הכניסה
 placeholder = st.empty()
 
-# 3. פונקציית מסך הכניסה המעוצב
+# 3. פונקציה שמציגה את כל מסך הכניסה המעוצב
 def show_login_page():
     with placeholder.container():
+        # הזרקת ה-CSS היוקרתי (זהב, נצנוצים ואנימציות)
         st.markdown("""
             <style>
             .stApp { background-color: #000000; color: #FFFFFF; overflow: hidden; }
@@ -46,6 +47,10 @@ def show_login_page():
                 background-color: #111 !important; color: #F7EF8A !important;
                 font-size: 20px !important; text-align: center;
             }
+            div[data-testid="stTextInput"] > div > div > input:focus {
+                border-color: #F7EF8A !important;
+                box-shadow: 0 0 15px rgba(247, 239, 138, 0.3) !important;
+            }
             </style>
             
             <div class="stars-background"></div>
@@ -55,36 +60,26 @@ def show_login_page():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown('<p style="text-align:center; color:#AAA;">אנא הכנס את קוד הגישה האישי שלך:</p>', unsafe_allow_html=True)
+            st.markdown('<p style="text-align:center; color:#AAA; font-size:16px;">אנא הכנס את קוד הגישה האישי שלך:</p>', unsafe_allow_html=True)
             return st.text_input("", type="password", placeholder="CODE", key="main_login_input")
 
-# 4. הרצה
+# 4. הרצת הלוגיקה של הכניסה
 user_code = show_login_page()
 
 if user_code == "1234":
     # מחיקת מסך הכניסה
     placeholder.empty()
     
-    # מיכל זמני להודעות מעבר וסינכרון
+    # מיכל זמני להודעת מעבר
     transition_container = st.empty()
-    
     with transition_container.container():
-        st.markdown('<p style="text-align:center; color:#F7EF8A; font-size:22px; margin-top:200px;">מאמת נתונים ומסנכרן תמונות...</p>', unsafe_allow_html=True)
-        
-        # --- תוספת: הפעלת מנוע החילוץ extractor.py ---
-        try:
-            import extractor
-            extractor.run_extraction() # מפעיל את החילוץ מהדרייב
-        except Exception as e:
-            # אם אין קובץ extractor או שיש שגיאה, נמשיך לקטלוג בכל זאת
-            pass
-            
-        time.sleep(1)
+        st.markdown('<p style="text-align:center; color:#F7EF8A; font-size:22px; margin-top:200px;">מעביר אותך לקטלוג המקצועי...</p>', unsafe_allow_html=True)
+        time.sleep(1.2)
     
-    # ניקוי סופי לפני טעינת הקטלוג
+    # מחיקת הודעת המעבר כדי שהדף יהיה נקי לגמרי
     transition_container.empty()
     
-    # טעינת הקטלוג המקורי (app.py) ללא שינוי בו
+    # טעינת הקטלוג המקורי מתוך app.py
     try:
         with open("app.py", encoding="utf-8") as f:
             code = f.read()
