@@ -9,11 +9,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 
-# ייבוא המפתח מקובץ constants.py
+# ייבוא המפתח
 try:
     from constants import RAW_KEY
 except ImportError:
-    st.error("קובץ constants.py חסר! וודא שיצרת אותו עם המשתנה RAW_KEY")
+    st.error("קובץ constants.py חסר!")
     st.stop()
 
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
@@ -43,9 +43,19 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
         background-color: white; padding: 15px !important;
         min-height: auto !important;
-        display: block !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
     
+    .product-img {
+        width: 100%;
+        height: 200px;
+        object-fit: contain;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        display: block;
+    }
+
     .email-btn {
         display: block; width: 100%; text-align: center; background-color: #27ae60;
         color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
@@ -112,24 +122,12 @@ def transform_he_to_en(text):
 def get_gdrive_service():
     try:
         encoded_key = re.sub(r'[^A-Za-z0-9+/=]', '', RAW_KEY)
-        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
-        info = json.loads(decoded_key)
+        info = json.loads(base64.b64decode(encoded_key).decode('utf-8'))
         creds = service_account.Credentials.from_service_account_info(info)
         return build('drive', 'v3', credentials=creds)
     except Exception as e:
         st.error(f"שגיאת חיבור: {e}")
         return None
-
-@st.cache_data(ttl=3600)
-def get_image_bytes(_service, file_id):
-    try:
-        request = _service.files().get_media(fileId=file_id)
-        fh = io.BytesIO()
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done: _, done = downloader.next_chunk()
-        return fh.getvalue()
-    except: return None
 
 @st.cache_data(ttl=600)
 def load_all_data():
@@ -174,8 +172,10 @@ def load_all_data():
                             'materials': extract_materials(full_text_str)
                         })
         except: continue
+    
+    # מיפוי תמונות
     img_results = service.files().list(q=f"'{FOLDER_ID_IMAGES}' in parents", fields="files(id, name)").execute()
-    img_map = {f['name']: f['id'] for f in img_results.get('files', [])}
+    img_map = {f['name'].rsplit('.', 1)[0]: f['id'] for f in img_results.get('files', [])}
     return pd.DataFrame(all_products), img_map
 
 df, img_map = load_all_data()
@@ -197,16 +197,11 @@ with st.sidebar:
     st.header("🛒 סל מוצרים")
     if st.session_state.selected_items:
         st.success(f"נבחרו {len(st.session_state.selected_items)} מוצרים")
-        
-        # יצירת תוכן המייל
-        email_body = "שלום,\n\nאשמח לקבל הצעה עבור המוצרים הבאים:\n\n"
-        for item_id, item_data in st.session_state.selected_items.items():
-            email_body += f"--- {item_data['item_key']} ---\n"
-            for detail in item_data['display_list']:
-                 if not contains_chinese(detail): email_body += f"• {detail}\n"
-            email_body += "\n"
-        
-        encoded_subject = urllib.parse.quote("Next Design - בקשה להצעת מחיר")
+        # כפתור מייל
+        email_body = "שלום,\n\nאבקש הצעה למוצרים:\n\n"
+        for _, item in st.session_state.selected_items.items():
+            email_body += f"- {item['item_key']}\n"
+        encoded_subject = urllib.parse.quote("בקשת מחיר - Next Design")
         encoded_body = urllib.parse.quote(email_body)
         st.markdown(f'<a href="mailto:?subject={encoded_subject}&body={encoded_body}" class="email-btn" target="_blank">✉️ שלח במייל לסוכן</a>', unsafe_allow_html=True)
         
@@ -219,22 +214,21 @@ st.markdown('<h1 style="text-align:center;">NEXT DESIGN</h1>', unsafe_allow_html
 search_input = st.text_input("", placeholder="🔍 חפש מוצר...")
 
 if not df.empty and search_input:
-    service = get_gdrive_service()
     term = normalize_text(search_input)
     term_trans = normalize_text(transform_he_to_en(search_input))
     results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
     
-    if not results.empty:
-        if price_min > 0.0 or price_max < 30.0:
-            results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
-        if max_moq > 0:
-            results = results[results['moq'].apply(lambda x: x is not None and x <= max_moq)]
-        if max_delivery < 90:
-            results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
-        if selected_materials:
-            results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
-        if selected_capacities:
-            results = results[results['capacity'].isin(selected_capacities)]
+    # סינונים
+    if price_min > 0.0 or price_max < 30.0:
+        results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
+    if max_moq > 0:
+        results = results[results['moq'].apply(lambda x: x is not None and x <= max_moq)]
+    if max_delivery < 90:
+        results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
+    if selected_materials:
+        results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
+    if selected_capacities:
+        results = results[results['capacity'].isin(selected_capacities)]
 
     if not results.empty:
         results = results.drop_duplicates(subset=['item_key'])
@@ -246,15 +240,12 @@ if not df.empty and search_input:
                     is_sel = unique_id in st.session_state.selected_items
                     if st.checkbox("➕ בחר", value=is_sel, key=f"c_{unique_id}"):
                         st.session_state.selected_items[unique_id] = row
-                    elif unique_id in st.session_state.selected_items:
-                        del st.session_state.selected_items[unique_id]
                     
-                    # הצגת תמונה דרך הפונקציה המובנית של Streamlit (הכי יציב)
-                    img_id = img_map.get(row['base_filename'] + ".jpg") or img_map.get(row['base_filename'] + ".png")
+                    # הצגת תמונה בשיטה עוקפת (Direct Link)
+                    img_id = img_map.get(row['base_filename'])
                     if img_id:
-                        img_bytes = get_image_bytes(service, img_id)
-                        if img_bytes:
-                            st.image(img_bytes, use_container_width=True)
+                        img_url = f"https://drive.google.com/uc?export=view&id={img_id}"
+                        st.markdown(f'<img src="{img_url}" class="product-img">', unsafe_allow_html=True)
                     
                     st.write(f"**{row['item_key']}**")
                     tags = ""
