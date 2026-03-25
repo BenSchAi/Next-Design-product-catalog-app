@@ -43,18 +43,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- כותרת ---
-st.markdown("""
-    <div style="text-align: center; margin-bottom: 40px; margin-top: 10px;">
-        <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration: none;">
-            <h1 style="font-family: 'Arial', sans-serif; font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
-                <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
-            </h1>
-        </a>
-        <h3 style="color: #666; font-weight: 400; margin-top: 5px; font-family: 'Arial', sans-serif;">קטלוג חכם לסוכנים 🔎</h3>
-    </div>
-""", unsafe_allow_html=True)
-
 # --- פונקציות עזר ---
 def contains_chinese(text):
     return bool(re.search(r'[\u4e00-\u9fff]', text))
@@ -113,15 +101,11 @@ def normalize_text(text):
     if not isinstance(text, str): text = str(text)
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
 
-# --- חיבור לגוגל דרייב ---
+# --- חיבור לגוגל ---
 def get_gdrive_service():
     try:
-        # --- תדביק את הקוד הארוך שלך בין המרכאות בשורה למטה ---
-        raw_key = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAiLAogICJwcml2YXRlX2tleV9pZCI6ICIyMjc5M2YyMGRlMjdhZjc5NmUzZWRiZGYzMTA5NzdkYzU1NTFhOGVjIiwKICAicHJpdmF0ZV9rZXkiOiAiLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tXG5NSUlFdkFJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLWXdnZ1NpQWdFQUFvSUJBUURKY1BXeXc5S2lxMmlRXG5OazA3bDNwQkNGR3hNTTJubU80eW1XWUh1d2NtTkhuMjdacThaOW5HVTFYMmdyejFlRUhQaDQrRTVIcTE2bVdDXG5UYmQ0RkNRWlRTcE1ad1duelFMS3I1cWlJa09hYkdBTllYS2RZdjhBWmIwUk9zSWNiYlBETGNuYzFHUEprcTJKXG5pQk9pc2NKKzV1SHFnMUVUZkxKSVZja3NwUjFjVm43c2ZIQWF2Ujl4NzY2VFdlb3RLNGpZTWxyRTdlaEY5UEQvXG52aUdkQlY4Z2laNC9ocXh3TUttNmpkVnBuNDBac0hJd0xid0txS3liMHJqdmRHVmo5c0F2dUl1NW1Dd0RYNWNNXG5vV0FCc3VkejVMN2hEd05FYndEU3NCRmpvK0FBSlhvSFBPNjJqZTZ2bWk1c21ZMmlOTGl3VXNodG5BR3pGRURYXG45clZOUlMrRkFnTUJBQUVDZ2dFQVZtV3M4N1c2WjB1R0p1Z3JXdVkrcUpyVlV0NkFMaVJROFlIS2VZRlZjU1RyXG50S1UzQ3h5dGtqclc4VW9rbWxHd1JENjdwdjlKeERGYXhUYm8vRWNETHBqaWplOVh4UjhRVmZkWUpyYjBjTXlQXG5xOTJDUjQrWW1FYUtmMVBJd21Hb3lvc2VlNmphZmE5NzM3TnQzSWRLU0p4bEEreTdmdFNxTUkwZW9oZlZUbThFXG40aWMrTmpuL2pUcHdEbEY3TDROOXI1WUpKUGd6WkRnRy81RUN3cko4V09ETUk2bng4N1Z1alkzU3FGbjFoMzNXXG5CS1lXazJvTHZobmZvY2xJUVdjODl1bkYvWnNWaXVYN1ltcWpTLzFpeXBvWVZJK3EweEMzL3pFTEU3N1ZLelBUXG5iaEpseCtXUnE5RDkwcnVPQ1N1Mm9mYmdLYmFhenZ6MUF0VTg1aHo4RndLQmdRRDdsZkgyak5Xa2VLeS9rUTZ2XG5jdGwwdFl0R3ptbFZMSWVxdmRCVkxQcmllTmlsWG55VHpweFFaU3N4b01CaHNNdDlnY0VUVysyRTZiVWhNTzNPXG5VZzgzSVJsUWRDRks3N2dyZVNpTmMxaGVpdTdIdkNxaGNNeXNLczJYaUpzcGdnTUpHcGYwZTB3TDNJMTZhb053XG52ZGh2VHlacjVGbG1rdk0zZ1dJdlJabmsrd0tCZ1FETStjZDZnSFI2QXNHVjNKMlRUdHZkZlVDd1NpcnZSZTZFXG5scjlnLzVWRFY2WHNyek82K3pIR2dHSWRPbGVEY3M4bHkwV050TGF3NEl0L0JUSlpiSGN2aDBOZ3lDNFY3Ry9FXG5EOERycTBTODR4RzUwM1R6dmM2endnQVFaRlRXMTZ2S2hXQVZxbE5UanhRUXV2QnVzdHo0SHNuRldyVi9hUXZkXG5ydGt5Y1N3VmZ3S0JnQ2cyT0QxckZ6NjVsd3JyZVlocmQveGloQWRtT0luSG0wdWNHUzkwQ0Ftb3ZSLzVjVG9DXG52Uk5RaUUzZlhzQitqSmZiNUd0ZXR5RVdaY0FQWFFNc05JaGdQdmFRQ1Q0OEFKamFQYlFXS3BxNTVCNkNvZUc1XG44TXpYN3BKNDRDd0xQc2IydkREMGdCd3BQV2ZDbkkycG1tMTRIakVDaDVPUWkxVmsxYmV1alVGL0FvR0FIN09oXG4vbmhQaTI5UnNYUGxpeHJ2TmxwZzN1TVpzTmdJQThtczM3dW53anFVRnY4aDZSRmdxV3JCd2ZOOEJZQ0VPVHd2XG5EYk9kYmMzTXhXQndZUlE5ZXNSWXoyY21lWTJQMjZyMEUzN3hxcVVUNE1Hcm5PY0dTUmNBRzRqbzlqRjFDR1dJXG5idEZoQWRObkx3ODZrR1JwZUphS2JsT1JMcHQ0a2xpd2p2U2g5TkVDZ1lBWmhuWFdDUkJGTTI5UlpxK3VxdmM2XG5FcDR4b0lxUWprRkYreGlLWTVacmlzQUt5bDNmVXcrMnR4ZDhxWE5DdHBqK3psdzRlQ210ZjNVM282UU1UM0VVXG52VGp5RlA2Qi9jMDYvTkFubVQrUEo3THBaNWoxWFZXVTB5WnZwZjlHdlVNVnJWZGpMeVRJdGs2alZlTzZLNW1zXG5BMS9uNGdZSkZMR0RRMmFybzdUTENBPT1cbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJkcml2ZS1yb2JvdEBnZW4tbGFuZy1jbGllbnQtMDQwMDcyNTU4MC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICIxMDkxNzM5OTUzNzQwNTIwMTMxNzUiLAogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsCiAgInRva2VuX3VyaSI6ICJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2RyaXZlLXJvYm90JTQwZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K"
-        
-        # מנגנון ניקוי אוטומטי מרווחים ותווים לא חוקיים
+        raw_key = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAiLAogICJwcml2YXRlX2tleV9pZCI6ICIyMjc5M2YyMGRlMjdhZjc5NmUzZWRiZGYzMTA5NzdkYzU1NTFhOGVjIiwKICAicHJpdmF0ZV9rZXkiOiAiLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tXG5NSUlFdkFJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLWXdnZ1NpQWdFQUFvSUJBUURKY1BXeXc5S2lxMmlRXG5OazA3bDNwQkNGR3hNTTJubU80eW1XWUh1d2NtTkhuMjdacThaOW5HVTFYMmdyejFlRUhQaDQrRTVIcTE2bVdDXG5UYmQ0RkNRWlRTcE1ad1duelFMS3I1cWlJa09hYkdBTllYS2RZdjhBWmIwUk9zSWNiYlBETGNuYzFHUEprcTJKXG5pQk9pc2NKKzV1SHFnMUVUZkxKSVZja3NwUjFjVm43c2ZIQWF2Ujl4NzY2VFdlb3RLNGpZTWxyRTdlaEY5UEQvXG52aUdkQlY4Z2laNC9ocXh3TUttNmpkVnBuNDBac0hJd0xid0txS3liMHJqdmRHVmo5c0F2dUl1NW1Dd0RYNWNNXG5vV0FCc3VkejVMN2hEd05FYndEU3NCRmpvK0FBSlhvSFBPNjJqZTZ2bWk1c21ZMmlOTGl3VXNodG5BR3pGRURYXG45clZOUlMrRkFnTUJBQUVDZ2dFQVZtV3M4N1c2WjB1R0p1Z3JXdVkrcUpyVlV0NkFMaVJROFlIS2VZRlZjU1RyXG50S1UzQ3h5dGtqclc4VW9rbWxHd1JENjdwdjlKeERGYXhUYm8vRWNETHBqaWplOVh4UjhRVmZkWUpyYjBjTXlQXG5xOTJDUjQrWW1FYUtmMVBJd21Hb3lvc2VlNmphZmE5NzM3TnQzSWRLU0p4bEEreTdmdFNxTUkwZW9oZlZUbThFXG40aWMrTmpuL2pUcHdEbEY3TDROOXI1WUpKUGd6WkRnRy81RUN3cko4V09ETUk2bng4N1Z1alkzU3FGbjFoMzNXXG5CS1lXazJvTHZobmZvY2xJUVdjODl1bkYvWnNWaXVYN1ltcWpTLzFpeXBvWVZJK3EweEMzL3pFTEU3N1ZLelBUXG5iaEpseCtXUnE5RDkwcnVPQ1N1Mm9mYmdLYmFhenZ6MUF0VTg1aHo4RndLQmdRRDdsZkgyak5Xa2VLeS9rUTZ2XG5jdGwwdFl0R3ptbFZMSWVxdmRCVkxQcmllTmlsWG55VHpweFFaU3N4b01CaHNNdDlnY0VUVysyRTZiVWhNTzNPXG5VZzgzSVJsUWRDRks3N2dyZVNpTmMxaGVpdTdIdkNxaGNNeXNLczJYaUpzcGdnTUpHcGYwZTB3TDNJMTZhb053XG52ZGh2VHlacjVGbG1rdk0zZ1dJdlJabmsrd0tCZ1FETStjZDZnSFI2QXNHVjNKMlRUdHZkZlVDd1NpcnZSZTZFXG5scjlnLzVWRFY2WHNyek82K3pIR2dHSWRPbGVEY3M4bHkwV050TGF3NEl0L0JUSlpiSGN2aDBOZ3lDNFY3Ry9FXG5EOERycTBTODR4RzUwM1R6dmM2endnQVFaRlRXMTZ2S2hXQVZxbE5UanhRUXV2QnVzdHo0SHNuRldyVi9hUXZkXG5ydGt5Y1N3VmZ3S0JnQ2cyT0QxckZ6NjVsd3JyZVlocmQveGloQWRtT0luSG0wdWNHUzkwQ0Ftb3ZSLzVjVG9DXG52Uk5RaUUzZlhzQitqSmZiNUd0ZXR5RVdaY0FQWFFNc05JaGdQdmFRQ1Q0OEFKamFQYlFXS3BxNTVCNkNvZUc1XG44TXpYN3BKNDRDd0xQc2IydkREMGdCd3BQV2ZDbkkycG1tMTRIakVDaDVPUWkxVmsxYmV1alVGL0FvR0FIN09oXG4vbmhQaTI5UnNYUGxpeHJ2TmxwZzN1TVpzTmdJQThtczM3dW53anFVRnY4aDZSRmdxV3JCd2ZOOEJZQ0VPVHd2XG5EYk9kYmMzTXhXQndZUlE5ZXNSWXoyY21lWTJQMjZyMEUzN3hxcVVUNE1Hcm5PY0dTUmNBRzRqbzlqRjFDR1dJXG5idEZoQWRObkx3ODZrR1JwZUphS2JsT1JMcHQ0a2xpd2p2U2g5TkVDZ1lBWmhuWFdDUkJGTTI5UlpxK3VxdmM2XG5FcDR4b0lxUWprRkYreGlLWTVacmlzQUt5bDNmVXcrMnR4ZDhxWE5DdHBqK3psdzRlQ210ZjNVM282UU1UM0VVXG52VGp5RlA2Qi9jMDYvTkFubVQrUEo3THBaNWoxWFZXVTB5WnZwZjlHdlVNVnJWZGpMeVRJdGs2alZlTzZLNW1zXG5BMS9uNGdZSkZMR0RRMmFybzdUTENBPT1cbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJkcml2ZS1yb2JvdEBnZW4tbGFuZy1jbGllbnQtMDQwMDcyNTU4MC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICIxMDkxNzM5OTUzNzQwNTIwMTMxNzUiLAogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsCiAgInRva2VuX3VyaSI6ICJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2RyaXZlLXJvYm90JTQwZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K" # תדביק כאן את ה-BASE64
         encoded_key = re.sub(r'[^A-Za-z0-9+/=]', '', raw_key)
-        
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
         info = json.loads(decoded_key)
         creds = service_account.Credentials.from_service_account_info(info)
@@ -145,10 +129,8 @@ def get_image_base64(_service, file_id):
 def load_all_data():
     service = get_gdrive_service()
     if not service: return pd.DataFrame(), {}
-    
     results = service.files().list(q=f"'{FOLDER_ID_EXCELS}' in parents", fields="files(id, name)").execute()
     all_products = []
-    
     for item in results.get('files', []):
         try:
             request = service.files().get_media(fileId=item['id'])
@@ -157,7 +139,6 @@ def load_all_data():
             while not done: _, done = downloader.next_chunk()
             fh.seek(0)
             df_excel = pd.read_excel(fh, header=None, engine='xlrd' if item['name'].endswith('.xls') else None)
-            
             skip_until = -1
             for idx in range(len(df_excel)):
                 if idx < skip_until: continue
@@ -219,7 +200,9 @@ with st.sidebar:
         for item_id, item_data in st.session_state.selected_items.items():
             email_body += f"--- {item_data['item_key']} ---\n"
             for detail in item_data['display_list']:
-                if not contains_chinese(detail): email_body += f"• {detail}\n"
+                d_up = detail.upper()
+                if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
+                    email_body += f"• {detail}\n"
             email_body += "\n"
         encoded_subject = urllib.parse.quote("Next Design - פרטי מוצרים")
         encoded_body = urllib.parse.quote(email_body)
@@ -229,14 +212,13 @@ with st.sidebar:
             st.rerun()
 
 # --- חיפוש ותצוגה ---
-search_input = st.text_input("", placeholder="🔍 חפש מוצר (למשל: Bottle)...")
+st.markdown('<h1 style="text-align:center;">NEXT DESIGN</h1>', unsafe_allow_html=True)
+search_input = st.text_input("", placeholder="🔍 חפש מוצר...")
 
 if not df.empty and search_input:
     service = get_gdrive_service()
     term = normalize_text(search_input)
-    term_trans = normalize_text(transform_he_to_en(search_input))
-    
-    results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
+    results = df[df['normalized_text'].str.contains(term, na=False)].copy()
     
     if not results.empty:
         if price_min > 0.0 or price_max < 30.0:
@@ -275,8 +257,9 @@ if not df.empty and search_input:
                     st.markdown(tags, unsafe_allow_html=True)
                     
                     for detail in row['display_list']:
-                        if not contains_chinese(detail):
-                            d_up = detail.upper()
+                        d_up = detail.upper()
+                        # סינון שורות מיותרות מגוף התצוגה
+                        if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
                             if 'USD' in d_up: st.write(f"<span style='color:#27ae60; font-weight:bold;'>💰 {detail}</span>", unsafe_allow_html=True)
                             elif 'DELIVERY' in d_up or 'DAYS' in d_up: st.write(f"<small>🚚 {detail}</small>", unsafe_allow_html=True)
                             else: st.write(f"<small>• {detail}</small>", unsafe_allow_html=True)
