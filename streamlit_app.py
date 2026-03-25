@@ -281,7 +281,7 @@ if not df.empty and search_input:
             results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
             
         # סינון נפח
-      if selected_capacities: 
+    if selected_capacities: 
             results = results[results['capacity'].isin(selected_capacities)]
     
     if not results.empty:
