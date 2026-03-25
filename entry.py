@@ -1,51 +1,89 @@
 import streamlit as st
 import time
 
-# 1. הגדרות עמוד (חובה שיופיעו ראשונות)
+# 1. הגדרות עמוד (חייב להיות ראשון בקוד)
 st.set_page_config(
     page_title="NEXT DESIGN | Premium Access", 
     layout="wide", 
     initial_sidebar_state="collapsed"
 )
 
-# 2. יצירת מיכל ריק שיכיל את כל דף הכניסה
+# 2. יצירת מיכל (Placeholder) שיכיל את כל דף הכניסה
 placeholder = st.empty()
 
-# 3. פונקציה שמציגה את כל מסך הכניסה המעוצב
+# 3. פונקציה המציגה את מסך הכניסה המעוצב בתוך המיכל
 def show_login_page():
     with placeholder.container():
-        # הזרקת ה-CSS היוקרתי (זהב, נצנוצים ואנימציות)
+        # הזרקת CSS יוקרתי: רקע שחור, נצנוצים וזהב דינמי
         st.markdown("""
             <style>
-            .stApp { background-color: #000000; color: #FFFFFF; overflow: hidden; }
+            /* עיצוב רקע האפליקציה */
+            .stApp { 
+                background-color: #000000; 
+                color: #FFFFFF; 
+                overflow: hidden; 
+            }
+            
+            /* הסתרת אלמנטים של Streamlit */
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {background-color: transparent !important;}
             
-            @keyframes moveStars { from { transform: translateY(0px); } to { transform: translateY(-2000px); } }
+            /* אנימציה לנצנוצים (כוכבים) ברקע */
+            @keyframes moveStars { 
+                from { transform: translateY(0px); } 
+                to { transform: translateY(-2000px); } 
+            }
             .stars-background {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
                 background: transparent url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAANElEQVRoQ+3OsQkAAAgDMMP/T65fOIFwU5A6Z2bMvM0+3j55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555k=') repeat top center;
                 opacity: 0.3; animation: moveStars 100s linear infinite;
             }
             
-            @keyframes goldShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+            /* אנימציה לזהב המנצנץ בלוגו */
+            @keyframes goldShimmer { 
+                0% { background-position: -200% 0; } 
+                100% { background-position: 200% 0; } 
+            }
             .gold-logo-text {
-                font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: 4px; font-size: 80px !important;
+                font-family: 'Montserrat', sans-serif; 
+                font-weight: 900; 
+                letter-spacing: 4px; 
+                font-size: 80px !important;
                 background: linear-gradient(to right, #BF9B30 0%, #F7EF8A 25%, #FFFFFF 50%, #F7EF8A 75%, #BF9B30 100%);
-                background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text;
-                animation: goldShimmer 4s linear infinite; display: block; text-align: center; margin-top: 100px;
+                background-size: 200% auto; 
+                color: transparent; 
+                -webkit-background-clip: text; 
+                background-clip: text;
+                animation: goldShimmer 4s linear infinite; 
+                display: block; 
+                text-align: center; 
+                margin-top: 100px;
             }
             
             .premium-subtitle {
-                text-align: center; font-family: 'Montserrat', sans-serif; color: #888888;
-                font-weight: 300; font-size: 22px; letter-spacing: 2px; margin-top: 10px; margin-bottom: 50px;
+                text-align: center; 
+                font-family: 'Montserrat', sans-serif; 
+                color: #888888;
+                font-weight: 300; 
+                font-size: 22px; 
+                letter-spacing: 2px; 
+                margin-top: 10px; 
+                margin-bottom: 50px;
             }
 
+            /* עיצוב תיבת הקלט בזהב ושחור */
             div[data-testid="stTextInput"] > div > div > input {
-                border-radius: 0px !important; border: 1px solid #444 !important;
-                background-color: #111 !important; color: #F7EF8A !important;
-                font-size: 20px !important; text-align: center;
+                border-radius: 0px !important; 
+                border: 1px solid #444 !important;
+                background-color: #111 !important; 
+                color: #F7EF8A !important;
+                font-size: 20px !important; 
+                text-align: center;
+            }
+            div[data-testid="stTextInput"] > div > div > input:focus {
+                border-color: #F7EF8A !important;
+                box-shadow: 0 0 15px rgba(247, 239, 138, 0.3) !important;
             }
             </style>
             
@@ -56,23 +94,27 @@ def show_login_page():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown('<p style="text-align:center; color:#AAA;">אנא הכנס את קוד הגישה האישי שלך:</p>', unsafe_allow_html=True)
-            # שימוש ב-Key ייחודי כדי למנוע בעיות רענון
+            st.markdown('<p style="text-align:center; color:#AAA; font-size:16px;">אנא הכנס את קוד הגישה האישי שלך:</p>', unsafe_allow_html=True)
             return st.text_input("", type="password", placeholder="CODE", key="main_login_input")
 
-# 4. הרצת הלוגיקה של הכניסה
+# 4. הפעלת מסך הכניסה וקבלת הקוד
 user_code = show_login_page()
 
+# 5. לוגיקת המעבר (הסיסמה היא 1234)
 if user_code == "1234":
-    # ה"מחק" - מעלים את כל דף הכניסה לפני טעינת הקטלוג
+    # מחיקת מסך הכניסה המעוצב מהמיכל
     placeholder.empty()
     
-    # הודעת מעבר קטנה בזהב
-    st.markdown('<p style="text-align:center; color:#F7EF8A; font-size:20px; margin-top:200px;">מעביר אותך לקטלוג המקצועי...</p>', unsafe_allow_html=True)
-    time.sleep(1)
-    st.empty() # ניקוי סופי
+    # יצירת מיכל זמני להודעת המעבר
+    transition_container = st.empty()
+    with transition_container.container():
+        st.markdown('<p style="text-align:center; color:#F7EF8A; font-size:22px; margin-top:200px;">מעביר אותך לקטלוג המקצועי...</p>', unsafe_allow_html=True)
+        time.sleep(1.2)
     
-    # טעינת הקטלוג המקורי מתוך app.py (בלי לגעת בו!)
+    # מחיקת הודעת המעבר כדי שהדף יהיה נקי לגמרי
+    transition_container.empty()
+    
+    # טעינת הקטלוג המקורי מתוך app.py (מבלי לשנות אותו)
     try:
         with open("app.py", encoding="utf-8") as f:
             code = f.read()
