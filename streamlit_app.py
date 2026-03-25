@@ -264,11 +264,25 @@ if not df.empty and search_input:
     results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
     
     if not results.empty:
-        if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
-        if max_moq < 50000: results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
-        if max_delivery < 90: results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
-        if selected_materials: results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
-        if selected_capacities: results = results[results['capacity'].isin(selected_capacities)]
+       # סינון מחיר
+        if price_min > 0.0 or price_max < 30.0: 
+            results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
+        
+        # סינון MOQ - רק אם המשתמש הזין ערך שהוא לא 0 ולא המקסימום
+        if 0 < max_moq < 50000: 
+            results = results[results['moq'].apply(lambda x: x is not None and x <= max_moq)]
+        
+        # סינון זמן אספקה
+        if max_delivery < 90: 
+            results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
+            
+        # סינון חומרים
+        if selected_materials: 
+            results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
+            
+        # סינון נפח
+      if selected_capacities: 
+            results = results[results['capacity'].isin(selected_capacities)]
     
     if not results.empty:
         results = results.drop_duplicates(subset=['item_key', 'file_source'])
