@@ -20,7 +20,7 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib pandas
+        pip install -r requirements.txt
 
     - name: Run the Scraper Robot
       run: python EXTRACTOR/image_scraper.py
