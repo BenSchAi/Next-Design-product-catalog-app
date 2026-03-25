@@ -18,7 +18,7 @@ FOLDER_ID_IMAGES = "1pIz-PszCqheMiTyBvDMvJdtpBbt1vRet"
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
-# --- עיצוב CSS ---
+# --- עיצוב CSS מתוקן ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
@@ -32,13 +32,15 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     }
 
+    /* תיקון קוביות המוצר - גובה גמיש כדי שהתמונות יופיעו */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-        background-color: white; padding: 15px !important; position: relative;
-        min-height: 620px !important;
-        max-height: 620px !important;
-        overflow: hidden;
+        background-color: white; padding: 15px !important; 
+        position: relative;
+        min-height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
     
     .email-btn {
@@ -107,7 +109,7 @@ def normalize_text(text):
 # --- חיבור לגוגל ---
 def get_gdrive_service():
     try:
-        raw_key = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAiLAogICJwcml2YXRlX2tleV9pZCI6ICIyMjc5M2YyMGRlMjdhZjc5NmUzZWRiZGYzMTA5NzdkYzU1NTFhOGVjIiwKICAicHJpdmF0ZV9rZXkiOiAiLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tXG5NSUlFdkFJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLWXdnZ1NpQWdFQUFvSUJBUURKY1BXeXc5S2lxMmlRXG5OazA3bDNwQkNGR3hNTTJubU80eW1XWUh1d2NtTkhuMjdacThaOW5HVTFYMmdyejFlRUhQaDQrRTVIcTE2bVdDXG5UYmQ0RkNRWlRTcE1ad1duelFMS3I1cWlJa09hYkdBTllYS2RZdjhBWmIwUk9zSWNiYlBETGNuYzFHUEprcTJKXG5pQk9pc2NKKzV1SHFnMUVUZkxKSVZja3NwUjFjVm43c2ZIQWF2Ujl4NzY2VFdlb3RLNGpZTWxyRTdlaEY5UEQvXG52aUdkQlY4Z2laNC9ocXh3TUttNmpkVnBuNDBac0hJd0xid0txS3liMHJqdmRHVmo5c0F2dUl1NW1Dd0RYNWNNXG5vV0FCc3VkejVMN2hEd05FYndEU3NCRmpvK0FBSlhvSFBPNjJqZTZ2bWk1c21ZMmlOTGl3VXNodG5BR3pGRURYXG45clZOUlMrRkFnTUJBQUVDZ2dFQVZtV3M4N1c2WjB1R0p1Z3JXdVkrcUpyVlV0NkFMaVJROFlIS2VZRlZjU1RyXG50S1UzQ3h5dGtqclc4VW9rbWxHd1JENjdwdjlKeERGYXhUYm8vRWNETHBqaWplOVh4UjhRVmZkWUpyYjBjTXlQXG5xOTJDUjQrWW1FYUtmMVBJd21Hb3lvc2VlNmphZmE5NzM3TnQzSWRLU0p4bEEreTdmdFNxTUkwZW9oZlZUbThFXG40aWMrTmpuL2pUcHdEbEY3TDROOXI1WUpKUGd6WkRnRy81RUN3cko4V09ETUk2bng4N1Z1alkzU3FGbjFoMzNXXG5CS1lXazJvTHZobmZvY2xJUVdjODl1bkYvWnNWaXVYN1ltcWpTLzFpeXBvWVZJK3EweEMzL3pFTEU3N1ZLelBUXG5iaEpseCtXUnE5RDkwcnVPQ1N1Mm9mYmdLYmFhenZ6MUF0VTg1aHo4RndLQmdRRDdsZkgyak5Xa2VLeS9rUTZ2XG5jdGwwdFl0R3ptbFZMSWVxdmRCVkxQcmllTmlsWG55VHpweFFaU3N4b01CaHNNdDlnY0VUVysyRTZiVWhNTzNPXG5VZzgzSVJsUWRDRks3N2dyZVNpTmMxaGVpdTdIdkNxaGNNeXNLczJYaUpzcGdnTUpHcGYwZTB3TDNJMTZhb053XG52ZGh2VHlacjVGbG1rdk0zZ1dJdlJabmsrd0tCZ1FETStjZDZnSFI2QXNHVjNKMlRUdHZkZlVDd1NpcnZSZTZFXG5scjlnLzVWRFY2WHNyek82K3pIR2dHSWRPbGVEY3M4bHkwV050TGF3NEl0L0JUSlpiSGN2aDBOZ3lDNFY3Ry9FXG5EOERycTBTODR4RzUwM1R6dmM2endnQVFaRlRXMTZ2S2hXQVZxbE5UanhRUXV2QnVzdHo0SHNuRldyVi9hUXZkXG5ydGt5Y1N3VmZ3S0JnQ2cyT0QxckZ6NjVsd3JyZVlocmQveGloQWRtT0luSG0wdWNHUzkwQ0Ftb3ZSLzVjVG9DXG52Uk5RaUUzZlhzQitqSmZiNUd0ZXR5RVdaY0FQWFFNc05JaGdQdmFRQ1Q0OEFKamFQYlFXS3BxNTVCNkNvZUc1XG44TXpYN3BKNDRDd0xQc2IydkREMGdCd3BQV2ZDbkkycG1tMTRIakVDaDVPUWkxVmsxYmV1alVGL0FvR0FIN09oXG4vbmhQaTI5UnNYUGxpeHJ2TmxwZzN1TVpzTmdJQThtczM3dW53anFVRnY4aDZSRmdxV3JCd2ZOOEJZQ0VPVHd2XG5EYk9kYmMzTXhXQndZUlE5ZXNSWXoyY21lWTJQMjZyMEUzN3hxcVVUNE1Hcm5PY0dTUmNBRzRqbzlqRjFDR1dJXG5idEZoQWRObkx3ODZrR1JwZUphS2JsT1JMcHQ0a2xpd2p2U2g5TkVDZ1lBWmhuWFdDUkJGTTI5UlpxK3VxdmM2XG5FcDR4b0lxUWprRkYreGlLWTVacmlzQUt5bDNmVXcrMnR4ZDhxWE5DdHBqK3psdzRlQ210ZjNVM282UU1UM0VVXG52VGp5RlA2Qi9jMDYvTkFubVQrUEo3THBaNWoxWFZXVTB5WnZwZjlHdlVNVnJWZGpMeVRJdGs2alZlTzZLNW1zXG5BMS9uNGdZSkZMR0RRMmFybzdUTENBPT1cbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJkcml2ZS1yb2JvdEBnZW4tbGFuZy1jbGllbnQtMDQwMDcyNTU4MC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICIxMDkxNzM5OTUzNzQwNTIwMTMxNzUiLAogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsCiAgInRva2VuX3VyaSI6ICJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2RyaXZlLXJvYm90JTQwZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K" # תדביק כאן את ה-BASE64
+        raw_key = "ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAiZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAiLAogICJwcml2YXRlX2tleV9pZCI6ICIyMjc5M2YyMGRlMjdhZjc5NmUzZWRiZGYzMTA5NzdkYzU1NTFhOGVjIiwKICAicHJpdmF0ZV9rZXkiOiAiLS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tXG5NSUlFdkFJQkFEQU5CZ2txaGtpRzl3MEJBUUVGQUFTQ0JLWXdnZ1NpQWdFQUFvSUJBUURKY1BXeXc5S2lxMmlRXG5OazA3bDNwQkNGR3hNTTJubU80eW1XWUh1d2NtTkhuMjdacThaOW5HVTFYMmdyejFlRUhQaDQrRTVIcTE2bVdDXG5UYmQ0RkNRWlRTcE1ad1duelFMS3I1cWlJa09hYkdBTllYS2RZdjhBWmIwUk9zSWNiYlBETGNuYzFHUEprcTJKXG5pQk9pc2NKKzV1SHFnMUVUZkxKSVZja3NwUjFjVm43c2ZIQWF2Ujl4NzY2VFdlb3RLNGpZTWxyRTdlaEY5UEQvXG52aUdkQlY4Z2laNC9ocXh3TUttNmpkVnBuNDBac0hJd0xid0txS3liMHJqdmRHVmo5c0F2dUl1NW1Dd0RYNWNNXG5vV0FCc3VkejVMN2hEd05FYndEU3NCRmpvK0FBSlhvSFBPNjJqZTZ2bWk1c21ZMmlOTGl3VXNodG5BR3pGRURYXG45clZOUlMrRkFnTUJBQUVDZ2dFQVZtV3M4N1c2WjB1R0p1Z3JXdVkrcUpyVlV0NkFMaVJROFlIS2VZRlZjU1RyXG50S1UzQ3h5dGtqclc4VW9rbWxHd1JENjdwdjlKeERGYXhUYm8vRWNETHBqaWplOVh4UjhRVmZkWUpyYjBjTXlQXG5xOTJDUjQrWW1FYUtmMVBJd21Hb3lvc2VlNmphZmE5NzM3TnQzSWRLU0p4bEEreTdmdFNxTUkwZW9oZlZUbThFXG40aWMrTmpuL2pUcHdEbEY3TDROOXI1WUpKUGd6WkRnRy81RUN3cko4V09ETUk2bng4N1Z1alkzU3FGbjFoMzNXXG5CS1lXazJvTHZobmZvY2xJUVdjODl1bkYvWnNWaXVYN1ltcWpTLzFpeXBvWVZJK3EweEMzL3pFTEU3N1ZLelBUXG5iaEpseCtXUnE5RDkwcnVPQ1N1Mm9mYmdLYmFhenZ6MUF0VTg1aHo4RndLQmdRRDdsZkgyak5Xa2VLeS9rUTZ2XG5jdGwwdFl0R3ptbFZMSWVxdmRCVkxQcmllTmlsWG55VHpweFFaU3N4b01CaHNNdDlnY0VUVysyRTZiVWhNTzNPXG5VZzgzSVJsUWRDRks3N2dyZVNpTmMxaGVpdTdIdkNxaGNNeXNLczJYaUpzcGdnTUpHcGYwZTB3TDNJMTZhb053XG52ZGh2VHlacjVGbG1rdk0zZ1dJdlJabmsrd0tCZ1FETStjZDZnSFI2QXNHVjNKMlRUdHZkZlVDd1NpcnZSZTZFXG5scjlnLzVWRFY2WHNyek82K3pIR2dHSWRPbGVEY3M4bHkwV050TGF3NEl0L0JUSlpiSGN2aDBOZ3lDNFY3Ry9FXG5EOERycTBTODR4RzUwM1R6dmM2endnQVFaRlRXMTZ2S2hXQVZxbE5UanhRUXV2QnVzdHo0SHNuRldyVi9hUXZkXG5ydGt5Y1N3VmZ3S0JnQ2cyT0QxckZ6NjVsd3JyZVlocmQveGloQWRtT0luSG0wdWNHUzkwQ0Ftb3ZSLzVjVG9DXG52Uk5RaUUzZlhzQitqSmZiNUd0ZXR5RVdaY0FQWFFNc05JaGdQdmFRQ1Q0OEFKamFQYlFXS3BxNTVCNkNvZUc1XG44TXpYN3BKNDRDd0xQc2IydkREMGdCd3BQV2ZDbkkycG1tMTRIakVDaDVPUWkxVmsxYmV1alVGL0FvR0FIN09oXG4vbmhQaTI5UnNYUGxpeHJ2TmxwZzN1TVpzTmdJQThtczM3dW53anFVRnY4aDZSRmdxV3JCd2ZOOEJZQ0VPVHd2XG5EYk9kYmMzTXhXQndZUlE5ZXNSWXoyY21lWTJQMjZyMEUzN3hxcVVUNE1Hcm5PY0dTUmNBRzRqbzlqRjFDR1dJXG5idEZoQWRObkx3ODZrR1JwZUphS2JsT1JMcHQ0a2xpd2p2U2g5TkVDZ1lBWmhuWFdDUkJGTTI5UlpxK3VxdmM2XG5FcDR4b0lxUWprRkYreGlLWTVacmlzQUt5bDNmVXcrMnR4ZDhxWE5DdHBqK3psdzRlQ210ZjNVM282UU1UM0VVXG52VGp5RlA2Qi9jMDYvTkFubVQrUEo3THBaNWoxWFZXVTB5WnZwZjlHdlVNVnJWZGpMeVRJdGs2alZlTzZLNW1zXG5BMS9uNGdZSkZMR0RRMmFybzdUTENBPT1cbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsCiAgImNsaWVudF9lbWFpbCI6ICJkcml2ZS1yb2JvdEBnZW4tbGFuZy1jbGllbnQtMDQwMDcyNTU4MC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsCiAgImNsaWVudF9pZCI6ICIxMDkxNzM5OTUzNzQwNTIwMTMxNzUiLAogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsCiAgInRva2VuX3VyaSI6ICJodHRwczovL29hdXRoMi5nb29nbGVhcGlzLmNvbS90b2tlbiIsCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLAogICJjbGllbnRfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9yb2JvdC92MS9tZXRhZGF0YS94NTA5L2RyaXZlLXJvYm90JTQwZ2VuLWxhbmctY2xpZW50LTA0MDA3MjU1ODAuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLAogICJ1bml2ZXJzZV9kb21haW4iOiAiZ29vZ2xlYXBpcy5jb20iCn0K" # <--- תדביק כאן את ה-BASE64 שלך
         encoded_key = re.sub(r'[^A-Za-z0-9+/=]', '', raw_key)
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
         info = json.loads(decoded_key)
@@ -248,7 +250,7 @@ if not df.empty and search_input:
                     img_id = img_map.get(row['base_filename'] + ".jpg") or img_map.get(row['base_filename'] + ".png")
                     if img_id:
                         b64 = get_image_base64(service, img_id)
-                        if b64: st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; height:200px; object-fit:contain; border-radius:8px;">', unsafe_allow_html=True)
+                        if b64: st.markdown(f'<img src="data:image/jpeg;base64,{b64}" style="width:100%; height:200px; object-fit:contain; border-radius:8px; margin-bottom:10px;">', unsafe_allow_html=True)
                     
                     st.write(f"**{row['item_key']}**")
                     tags = ""
@@ -258,6 +260,7 @@ if not df.empty and search_input:
                     
                     for detail in row['display_list']:
                         d_up = detail.upper()
+                        # סינון כפילויות של ITEM NO ו-MOQ מגוף הטקסט
                         if not contains_chinese(detail) and not any(x in d_up for x in ['ITEM NO', 'MOQ:', 'FOB COST', 'FOB PORT', 'WEB', 'HTTP', 'VALIDITY']):
                             if 'USD' in d_up: st.write(f"<span style='color:#27ae60; font-weight:bold;'>💰 {detail}</span>", unsafe_allow_html=True)
                             elif 'DELIVERY' in d_up or 'DAYS' in d_up: st.write(f"<small>🚚 {detail}</small>", unsafe_allow_html=True)
