@@ -8,6 +8,7 @@ import urllib.parse
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+import constants  # <--- חיבור לקובץ ה-Base64 שלך
 
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
 
@@ -132,7 +133,8 @@ def normalize_text(text):
 
 def get_gdrive_service():
     try:
-        encoded_key = st.secrets["GCP_SERVICE_ACCOUNT"]
+        # כאן בוצע העדכון למשיכה מהקובץ constants.py
+        encoded_key = constants.GCP_SERVICE_ACCOUNT 
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
         info = json.loads(decoded_key)
         creds = service_account.Credentials.from_service_account_info(info)
@@ -167,21 +169,21 @@ def load_all_data():
             done = False
             while not done: _, done = downloader.next_chunk()
             fh.seek(0)
-            df = pd.read_excel(fh, header=None, engine='xlrd' if item['name'].endswith('.xls') else None)
+            df_file = pd.read_excel(fh, header=None, engine='xlrd' if item['name'].endswith('.xls') else None)
             
             skip_until = -1
-            for idx in range(len(df)):
+            for idx in range(len(df_file)):
                 if idx < skip_until: continue
                 
-                row_str = " ".join(df.iloc[idx].dropna().astype(str))
+                row_str = " ".join(df_file.iloc[idx].dropna().astype(str))
                 if any(k in row_str.upper() for k in ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'DESCRIPTION :']):
                     details = []
                     item_key = ""
                     for offset in range(25):
                         curr_idx = idx + offset
-                        if curr_idx >= len(df): skip_until = curr_idx; break
+                        if curr_idx >= len(df_file): skip_until = curr_idx; break
                             
-                        b_row = df.iloc[curr_idx].dropna().astype(str)
+                        b_row = df_file.iloc[curr_idx].dropna().astype(str)
                         line = " ".join(b_row).strip()
                         line = re.sub(r'\s+', ' ', line)
                         
