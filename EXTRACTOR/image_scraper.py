@@ -8,8 +8,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import constants
 
-# ה-IDs של התיקיות בכונן המשותף
-FOLDER_ID_EXCELS = "1x7bE0YmGhrK_-0f06ixw1OKqquV_8AHZ"
+# IDs המעודכנים לפי הקישורים ששלחת
+FOLDER_ID_EXCELS = "1x7bE0YmGhrK_-0f06ixwlOKqquV_8AHZ"
 FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 
 def get_service():
@@ -21,14 +21,6 @@ def get_service():
     creds = service_account.Credentials.from_service_account_info(info)
     return build('drive', 'v3', credentials=creds)
 
-def empty_robot_trash(service):
-    print("🧹 מנקה את 'פח האשפה' הנסתר...")
-    try:
-        service.files().emptyTrash().execute()
-        print("✅ פח האשפה נקי.")
-    except:
-        pass
-
 def process_excels():
     from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
     from spire.xls import Workbook
@@ -36,9 +28,7 @@ def process_excels():
     service = get_service()
     if not service: return
     
-    empty_robot_trash(service)
-    
-    # חיפוש תמונות קיימות עם תמיכה בכונן משותף
+    # חיפוש תמונות קיימות בתיקייה המשותפת
     print(f"מחפש תמונות קיימות בתיקייה {FOLDER_ID_IMAGES}...")
     results = service.files().list(
         q=f"'{FOLDER_ID_IMAGES}' in parents", 
@@ -48,8 +38,8 @@ def process_excels():
     ).execute()
     existing_imgs = [f['name'].lower() for f in results.get('files', [])]
 
-    # סריקת אקסלים עם תמיכה בכונן משותף
-    print(f"סורק קבצי אקסל בתיקייה {FOLDER_ID_EXCELS}...")
+    # סריקת אקסלים בתיקייה המשותפת
+    print(f"סורק אקסלים בתיקייה {FOLDER_ID_EXCELS}...")
     results = service.files().list(
         q=f"'{FOLDER_ID_EXCELS}' in parents", 
         fields="files(id, name)",
@@ -59,14 +49,13 @@ def process_excels():
     excels = results.get('files', [])
 
     if not excels:
-        print("⚠️ לא נמצאו קבצי אקסל בתיקייה המשותפת.")
+        print("⚠️ לא נמצאו קבצי אקסל בתיקייה. וודא שהם שם!")
         return
 
     for excel in excels:
         file_name = excel['name']
         file_id = excel['id']
         base_name = file_name.rsplit('.', 1)[0]
-        
         print(f"--- מעבד: {file_name} ---")
         
         try:
@@ -86,8 +75,8 @@ def process_excels():
                 sheet = workbook.Worksheets[sheet_idx]
                 for pic_idx in range(sheet.Pictures.Count):
                     pic = sheet.Pictures[pic_idx]
-                    
                     img_name = f"{base_name}_{img_counter}.png"
+                    
                     if img_name.lower() in existing_imgs:
                         print(f"  ✅ {img_name} כבר קיים.")
                         img_counter += 1
@@ -95,23 +84,17 @@ def process_excels():
                     
                     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
                         pic.Picture.Save(tmp_img.name)
-                        
                         media = MediaFileUpload(tmp_img.name, resumable=True)
                         service.files().create(
                             body={'name': img_name, 'parents': [FOLDER_ID_IMAGES]},
                             media_body=media,
-                            supportsAllDrives=True # מאפשר העלאה לכונן משותף
+                            supportsAllDrives=True # חשוב מאוד לכונן משותף
                         ).execute()
-                        print(f"  🚀 הצלחה! תמונה חולצה: {img_name}")
-                    
-                    if os.path.exists(tmp_img.name):
-                        os.remove(tmp_img.name)
+                        print(f"  🚀 הצלחה! חולצה תמונה: {img_name}")
                     img_counter += 1
             
             workbook.Dispose()
-            if os.path.exists(tmp_excel_path):
-                os.remove(tmp_excel_path)
-            
+            os.remove(tmp_excel_path)
         except Exception as e:
             print(f"  ❌ שגיאה ב-{file_name}: {e}")
 
