@@ -4,9 +4,9 @@ import json
 import tempfile
 import os
 import sys
+import zipfile
 from PIL import Image
 
-# הזרקת נתיב constants
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import constants
 
@@ -22,40 +22,6 @@ def get_service():
     creds = service_account.Credentials.from_service_account_info(info)
     return build('drive', 'v3', credentials=creds)
 
-def extract_images_direct(content):
-    """חילוץ תמונות ישירות מהביטים של הקובץ - עוקף את כל שגיאות האקסל"""
-    found = []
-    # חתימות דיגיטליות של JPEG ו-PNG
-    signatures = [
-        (b'\xff\xd8\xff', b'\xff\xd9'), # JPEG
-        (b'\x89PNG\r\n\x1a\n', b'IEND\xaeB`\x82') # PNG
-    ]
-    
-    for start_sig, end_sig in signatures:
-        start = 0
-        while True:
-            start = content.find(start_sig, start)
-            if start == -1: break
-            
-            end = content.find(end_sig, start)
-            if end == -1:
-                # אם אין סוף ברור, ניקח נתח גדול וננסה לפענח
-                end = start + 5000000 
-            else:
-                end += len(end_sig)
-            
-            try:
-                img_data = content[start:end]
-                img = Image.open(io.BytesIO(img_data))
-                img.load()
-                # מסנן רק תמונות שאינן אייקונים קטנים
-                if img.width > 40 and img.height > 40:
-                    found.append(img.copy())
-                start = end
-            except:
-                start += len(start_sig)
-    return found
-
 def process_excels():
     from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
     service = get_service()
@@ -67,12 +33,14 @@ def process_excels():
     results = service.files().list(q=f"'{FOLDER_ID_EXCELS}' in parents", fields="files(id, name)").execute()
     excels = results.get('files', [])
 
+    print(f"סורק {len(excels)} קבצי אקסל בדרייב...")
+
     for excel in excels:
         file_name = excel['name']
         file_id = excel['id']
         base_name = file_name.rsplit('.', 1)[0]
         
-        print(f"--- סורק קובץ (בשיטה ישירה): {file_name} ---")
+        print(f"--- בודק את: {file_name} ---")
         
         try:
             request = service.files().get_media(fileId=file_id)
@@ -82,17 +50,36 @@ def process_excels():
             while not done: _, done = downloader.next_chunk()
             content = fh.getvalue()
             
-            # שאיבה ישירה בלי להשתמש בספריות אקסל בכלל!
-            found_images = extract_images_direct(content)
+            found_images = []
+
+            # 1. השיטה המקורית שעבדה על קבצי XLSX (מחלצת מהתיקייה הפנימית של האקסל)
+            if file_name.lower().endswith('.xlsx'):
+                with zipfile.ZipFile(io.BytesIO(content)) as z:
+                    media_files = [f for f in z.namelist() if f.startswith('xl/media/')]
+                    for mf in media_files:
+                        img = Image.open(io.BytesIO(z.read(mf)))
+                        found_images.append(img)
+
+            # 2. השיטה המקורית שעבדה בקולאב על קבצי XLS ישנים (בלי פילטרים של גודל)
+            elif file_name.lower().endswith('.xls'):
+                import xlrd
+                book = xlrd.open_workbook(file_contents=content, formatting_info=True)
+                for record in book.biff_records:
+                    if record[0] in [0x00E0, 0x01B6, 0x00EB]:
+                        try:
+                            img = Image.open(io.BytesIO(record[1]))
+                            found_images.append(img)
+                        except:
+                            continue
 
             if not found_images:
-                print(f"  ⚠️ לא נמצאו תמונות ב-{file_name}")
+                print(f"  ⚠️ לא נמצאו תמונות בקובץ {file_name}")
                 continue
 
             for idx, img in enumerate(found_images):
                 img_name = f"{base_name}_{idx}.png"
                 if img_name.lower() in existing_imgs:
-                    print(f"  ✅ {img_name} כבר קיים.")
+                    print(f"  ✅ התמונה {img_name} כבר קיימת בדרייב.")
                     continue
 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
@@ -102,10 +89,10 @@ def process_excels():
                         body={'name': img_name, 'parents': [FOLDER_ID_IMAGES]},
                         media_body=media
                     ).execute()
-                    print(f"  🚀 הצלחה! תמונה נשלפה מהקוד: {img_name}")
+                    print(f"  🚀 הצלחה! התמונה חולצה: {img_name}")
                 
         except Exception as e:
-            print(f"  ❌ שגיאה ב-{file_name}: {e}")
+            print(f"  ❌ שגיאה בקובץ {file_name}: {e}")
 
 if __name__ == "__main__":
     process_excels()
