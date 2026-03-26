@@ -40,7 +40,7 @@ def process_excels():
         file_id = excel['id']
         base_name = file_name.rsplit('.', 1)[0]
         
-        print(f"--- בודק את: {file_name} ---")
+        print(f"--- מעבד קובץ: {file_name} ---")
         
         try:
             request = service.files().get_media(fileId=file_id)
@@ -52,34 +52,50 @@ def process_excels():
             
             found_images = []
 
-            # 1. השיטה המקורית שעבדה על קבצי XLSX (מחלצת מהתיקייה הפנימית של האקסל)
+            # שיטה ל-XLSX
             if file_name.lower().endswith('.xlsx'):
-                with zipfile.ZipFile(io.BytesIO(content)) as z:
-                    media_files = [f for f in z.namelist() if f.startswith('xl/media/')]
-                    for mf in media_files:
-                        img = Image.open(io.BytesIO(z.read(mf)))
-                        found_images.append(img)
+                try:
+                    with zipfile.ZipFile(io.BytesIO(content)) as z:
+                        media_files = [f for f in z.namelist() if f.startswith('xl/media/')]
+                        for mf in media_files:
+                            img = Image.open(io.BytesIO(z.read(mf)))
+                            found_images.append(img)
+                except Exception as e:
+                    print(f"  ⚠️ בעיה בחילוץ מ-XLSX: {e}")
 
-            # 2. השיטה המקורית שעבדה בקולאב על קבצי XLS ישנים (בלי פילטרים של גודל)
+            # שיטה ל-XLS ישנים (שיטת קולאב המוכחת)
             elif file_name.lower().endswith('.xls'):
                 import xlrd
                 book = xlrd.open_workbook(file_contents=content, formatting_info=True)
                 for record in book.biff_records:
                     if record[0] in [0x00E0, 0x01B6, 0x00EB]:
+                        data = record[1]
+                        # חיפוש חתימות דיגיטליות למניעת קריסה
+                        jpg_idx = data.find(b'\xff\xd8\xff')
+                        png_idx = data.find(b'\x89PNG\r\n\x1a\n')
+                        
                         try:
-                            img = Image.open(io.BytesIO(record[1]))
-                            found_images.append(img)
+                            if jpg_idx != -1:
+                                found_images.append(Image.open(io.BytesIO(data[jpg_idx:])))
+                            elif png_idx != -1:
+                                found_images.append(Image.open(io.BytesIO(data[png_idx:])))
+                            else:
+                                found_images.append(Image.open(io.BytesIO(data)))
                         except:
-                            continue
+                            pass
 
             if not found_images:
-                print(f"  ⚠️ לא נמצאו תמונות בקובץ {file_name}")
+                print(f"  ⚠️ לא נמצאו תמונות ויזואליות בקובץ {file_name}")
                 continue
 
             for idx, img in enumerate(found_images):
+                # סינון בסיסי ביותר כדי לא לתפוס פיקסלים של גבולות אקסל
+                if img.width < 10 or img.height < 10:
+                    continue
+                    
                 img_name = f"{base_name}_{idx}.png"
                 if img_name.lower() in existing_imgs:
-                    print(f"  ✅ התמונה {img_name} כבר קיימת בדרייב.")
+                    print(f"  ✅ התמונה {img_name} כבר קיימת.")
                     continue
 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
