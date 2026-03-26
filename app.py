@@ -234,7 +234,10 @@ df, img_map = load_all_data()
 with st.sidebar:
     st.header("⚙️ סינון חכם")
     price_min, price_max = st.slider("טווח מחיר ליח' (USD)", min_value=0.0, max_value=30.0, value=(0.0, 30.0), step=0.1)
-    max_moq = st.number_input("MOQ מקסימלי (כמות מינימלית)", min_value=0, max_value=100000, value=50000, step=500)
+    
+    # --- התיקון של ה-MOQ: מתחיל כריק (None) ---
+    max_moq = st.number_input("MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500)
+    
     max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
     
     available_materials = ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"]
@@ -276,7 +279,10 @@ if not df.empty and search_input:
     
     if not results.empty:
         if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
-        if max_moq < 50000: results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
+        
+        # --- התיקון השני של ה-MOQ: סינון רק אם הוכנס מספר ---
+        if max_moq is not None: results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
+        
         if max_delivery < 90: results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
         if selected_materials: results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
         if selected_capacities: results = results[results['capacity'].isin(selected_capacities)]
@@ -292,7 +298,6 @@ if not df.empty and search_input:
                 with st.container(border=True):
                     is_selected = unique_item_id in st.session_state.selected_items
                     
-                    # התיקון לספירה המהירה של סל הקניות
                     if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
                         if not is_selected:
                             st.session_state.selected_items[unique_item_id] = row
