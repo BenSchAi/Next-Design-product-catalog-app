@@ -8,8 +8,8 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import constants
 
-FOLDER_ID_EXCELS = "1em5nttKDkBs86VgrknaKjhdNi_XBITCK"
-FOLDER_ID_IMAGES = "1pIz-PszCqheMiTyBvDMvJdtpBbt1vRet"
+FOLDER_ID_EXCELS = "1x7bE0YmGhrK_-0f06ixw1OKqquV_8AHZ"
+FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 
 def get_service():
     from google.oauth2 import service_account
