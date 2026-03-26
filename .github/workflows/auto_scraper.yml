@@ -2,8 +2,8 @@ name: Auto Image Scraper Robot
 
 on:
   schedule:
-    - cron: '0 * * * *' # הרובוט ירוץ אוטומטית פעם בשעה
-  workflow_dispatch: # כפתור להפעלה ידנית
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   scrape_images:
@@ -18,9 +18,9 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install Dependencies
+    - name: Force Install Colab Versions
       run: |
-        pip install -r requirements.txt
+        pip install xlrd==1.2.0 Pillow google-api-python-client google-auth-httplib2 google-auth-oauthlib pandas openpyxl
 
     - name: Run the Scraper Robot
       run: python EXTRACTOR/image_scraper.py
