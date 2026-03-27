@@ -51,6 +51,21 @@ def show_login_page():
                 border-color: #F7EF8A !important;
                 box-shadow: 0 0 15px rgba(247, 239, 138, 0.3) !important;
             }
+            
+            /* --- התוספת החדשה: עיצוב כפתור הכניסה --- */
+            div[data-testid="stButton"] > button {
+                background-color: #BF9B30 !important;
+                color: #000 !important;
+                font-weight: bold !important;
+                border-radius: 5px !important;
+                border: none !important;
+                font-size: 18px !important;
+                margin-top: 15px !important;
+            }
+            div[data-testid="stButton"] > button:hover {
+                background-color: #F7EF8A !important;
+                color: #000 !important;
+            }
             </style>
             
             <div class="stars-background"></div>
@@ -61,7 +76,14 @@ def show_login_page():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown('<p style="text-align:center; color:#AAA; font-size:16px;">אנא הכנס את קוד הגישה האישי שלך:</p>', unsafe_allow_html=True)
-            return st.text_input("", type="password", placeholder="CODE", key="main_login_input")
+            
+            # --- התיקון: הוספנו autocomplete="current-password" כדי לעצור את ההצעה של גוגל ---
+            code_val = st.text_input("", type="password", placeholder="CODE", key="main_login_input", autocomplete="current-password")
+            
+            # --- התיקון: כפתור ברור במקום להסתמך רק על אנטר ---
+            st.button("היכנס לקטלוג 🔑", use_container_width=True)
+            
+            return code_val
 
 # 4. הרצת הלוגיקה של הכניסה
 user_code = show_login_page()
