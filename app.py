@@ -133,6 +133,7 @@ def normalize_text(text):
 
 def get_gdrive_service():
     try:
+        # כאן בוצע העדכון למשיכה מהקובץ constants.py
         encoded_key = constants.GCP_SERVICE_ACCOUNT 
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
         info = json.loads(decoded_key)
@@ -268,14 +269,17 @@ with st.sidebar:
             st.rerun()
 
 # --- חיפוש ותצוגה ---
-search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (למשל: Bottle)...")
+search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
 
 if not df.empty and search_input:
     service = get_gdrive_service()
-    term = normalize_text(search_input)
-    term_trans = normalize_text(transform_he_to_en(search_input))
     
-    results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
+    if search_input.strip().upper() == "ALL":
+        results = df.copy()
+    else:
+        term = normalize_text(search_input)
+        term_trans = normalize_text(transform_he_to_en(search_input))
+        results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
     
     if not results.empty:
         if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
