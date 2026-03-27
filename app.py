@@ -8,21 +8,22 @@ import urllib.parse
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import constants  # <--- חיבור לקובץ ה-Base64 שלך
+import constants  # חיבור לקובץ ה-Base64
 
+# --- 1. הגדרות עמוד ---
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
 
-# --- הגדרות קבועות (מעודכן לכונן משותף) ---
+# --- 2. הגדרות קבועות (כונן משותף) ---
 FOLDER_ID_EXCELS = "1x7bE0YmGhrK_-0f06ixwlOKqquV_8AHZ"
 FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
-# --- מילון קטגוריות ---
+# --- 3. מילון קטגוריות מתוקן ומורחב ---
 CATEGORY_MAP = {
     "טכנולוגיה וגאדג'טים": ["usb", "power bank", "speaker", "charger", "cable", "wireless", "mouse", "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
-    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "jump rope"],
+    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "jump rope", "bottle", "flask", "tumbler", "drinkware", "cooler"],
     "בקבוקים, כוסות ושתייה": ["bottle", "mug", "cup", "tumbler", "flask", "drinkware", "thermos", "shaker", "glass", "straw"],
     "עטים וכלי כתיבה": ["pen", "pencil", "notebook", "notepad", "stylus", "marker", "highlighter", "stationery", "diary"],
     "תיקים וארנקים": ["bag", "backpack", "tote", "pouch", "wallet", "drawstring", "duffel", "briefcase", "cooler", "luggage"],
@@ -32,12 +33,23 @@ CATEGORY_MAP = {
     "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
 }
 
-# --- עיצוב CSS ---
+# --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
+    
+    /* הבלטת כותרות סיידבר */
+    section[data-testid="stSidebar"] h2 {
+        color: #BF9B30 !important;
+        font-weight: 800 !important;
+        border-bottom: 2px solid #BF9B30;
+        padding-bottom: 5px;
+        margin-bottom: 15px !important;
+    }
+
+    section[data-testid="stSidebar"] { overflow-x: hidden !important; }
     
     .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
     
@@ -74,7 +86,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- כותרת ---
+# --- 5. כותרת ---
 st.markdown("""
     <div style="text-align: center; margin-bottom: 40px; margin-top: 10px;">
         <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration: none;">
@@ -86,9 +98,64 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# --- פונקציות ---
+# --- 6. פונקציות עיבוד נתונים ---
 def contains_chinese(text):
     return bool(re.search(r'[\u4e00-\u9fff]', text))
+
+def format_moq_display(val):
+    if val is None or pd.isna(val):
+        return "NAN"
+    try:
+        num = float(val)
+        if num >= 1000:
+            return f"{num/1000:g}K"
+        return f"{num:g}"
+    except:
+        return "NAN"
+
+def extract_moq(details_list):
+    # 1. חיפוש שורת MOQ מפורשת
+    for detail in details_list:
+        d_up = detail.upper()
+        if 'MOQ' in d_up:
+            clean_d = d_up.replace(',', '')
+            match = re.search(r'MOQ.*?(\d+\.?\d*)\s*(K?)', clean_d)
+            if match:
+                val = float(match.group(1))
+                if match.group(2) == 'K': val *= 1000
+                return val
+            # מקרה גיבוי אם הרג'קס לא תפס אבל יש מספר
+            nums = re.findall(r'\d+', clean_d)
+            if nums: return float(nums[0])
+            
+    # 2. חיפוש בשורת המחיר (למשל: for 3Kpcs)
+    for detail in details_list:
+        d_up = detail.upper()
+        if 'FOR' in d_up and ('PCS' in d_up or 'PC' in d_up):
+            match = re.search(r'FOR\s+(\d+\.?\d*)\s*(K?)\s*PCS?', d_up)
+            if match:
+                val = float(match.group(1))
+                if match.group(2) == 'K': val *= 1000
+                return val
+    return None
+
+def extract_categories(details_list):
+    found_categories = set()
+    # מילים שמתארות אריזה ולא מוצר (כדי למנוע תיוג בקבוק כתיק)
+    packing_keywords = ['OPP BAG', 'POLY BAG', 'PE BAG', 'PACKING', 'MEAS', 'CTN', 'G.W', 'N.W', 'BOX']
+    
+    text_to_scan = ""
+    for line in details_list:
+        if not any(pk in line.upper() for pk in packing_keywords):
+            text_to_scan += " " + line.lower()
+
+    for cat, keywords in CATEGORY_MAP.items():
+        for kw in keywords:
+            # שימוש בגבולות מילה \b מבטיח ש-cabbage לא יתפס כ-bag
+            if re.search(r'\b' + re.escape(kw) + r'\b', text_to_scan):
+                found_categories.add(cat)
+                break
+    return list(found_categories)
 
 def extract_min_price(details_list):
     prices = []
@@ -102,14 +169,6 @@ def extract_min_price(details_list):
                     if val > 0: prices.append(val)
                 except: pass
     return min(prices) if prices else None
-
-def extract_moq(details_list):
-    for detail in details_list:
-        d_up = detail.upper()
-        if 'MOQ' in d_up:
-            nums = re.findall(r'\d+', detail.replace(',', ''))
-            if nums: return int(nums[0])
-    return None
 
 def extract_delivery_days(details_list):
     for detail in details_list:
@@ -136,16 +195,6 @@ def extract_materials(full_text):
     if 'ceramic' in text_lower: materials.append('Ceramic')
     return list(set(materials))
 
-def extract_categories(full_text):
-    found_categories = []
-    text_lower = full_text.lower()
-    for cat, keywords in CATEGORY_MAP.items():
-        for kw in keywords:
-            if re.search(r'\b' + re.escape(kw) + r'\b', text_lower):
-                found_categories.append(cat)
-                break
-    return found_categories
-
 def transform_he_to_en(text):
     he_en_map = {'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g', 'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n', 'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u', 'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y', 'ז': 'z'}
     return "".join([he_en_map.get(char, char) for char in text.lower()])
@@ -154,6 +203,7 @@ def normalize_text(text):
     if not isinstance(text, str): text = str(text)
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
 
+# --- 7. שירות גוגל וטעינת נתונים ---
 def get_gdrive_service():
     try:
         encoded_key = constants.GCP_SERVICE_ACCOUNT 
@@ -238,7 +288,7 @@ def load_all_data():
                             'delivery_days': extract_delivery_days(details),
                             'capacity': extract_capacity(full_text_str),
                             'materials': extract_materials(full_text_str),
-                            'categories': extract_categories(full_text_str) 
+                            'categories': extract_categories(details)
                         })
         except: continue
     
@@ -254,7 +304,7 @@ def load_all_data():
 
 df, img_map = load_all_data()
 
-# --- תפריט צד ---
+# --- 8. תפריט צד ---
 with st.sidebar:
     st.header("⚙️ סינון חכם")
     
@@ -281,7 +331,8 @@ with st.sidebar:
         for item_id, item_data in st.session_state.selected_items.items():
             email_body += f"--- {item_data['item_key']} ---\n"
             for detail in item_data['display_list']:
-                if "Unnamed" not in detail and not contains_chinese(detail): 
+                # העלמת ה-MOQ המקורי מרשימת המייל כדי למנוע כפילויות
+                if "Unnamed" not in detail and not contains_chinese(detail) and "MOQ" not in detail.upper(): 
                     email_body += f"• {detail}\n"
             email_body += f"מקור: {item_data['file_source']}\n\n"
         email_body += "בברכה,\nNext Design"
@@ -292,17 +343,19 @@ with st.sidebar:
             st.session_state.selected_items = {}
             st.rerun()
 
-# --- חיפוש ותצוגה ---
+    # ריווח בתחתית הסיידבר למניעת חיתוך טקסט
+    st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
+
+# --- 9. חיפוש ותצוגה ---
 search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
 
-# הלוגיקה החדשה: מציגים אם יש חיפוש טקסט או אם בחרו מסנן בסיידבר
+# הלוגיקה החדשה והמלאה ללא חיתוכים
 should_show_results = bool(search_input.strip()) or bool(selected_categories) or bool(selected_materials) or bool(selected_capacities)
 
 if not df.empty and should_show_results:
     service = get_gdrive_service()
     results = df.copy()
     
-    # סינון טקסט (רק אם הקלידו משהו וזה לא ALL)
     if search_input.strip() and search_input.strip().upper() != "ALL":
         term = normalize_text(search_input)
         term_trans = normalize_text(transform_he_to_en(search_input))
@@ -310,7 +363,6 @@ if not df.empty and should_show_results:
     
     if not results.empty:
         if selected_categories: results = results[results['categories'].apply(lambda cats: any(c in cats for c in selected_categories))]
-        
         if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
         if max_moq is not None: results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
         if max_delivery < 90: results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
@@ -355,19 +407,35 @@ if not df.empty and should_show_results:
                     else:
                         img_html = '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
                     
-                    tags_html = ""
-                    if row['moq']: tags_html += f"<span style='background:#f1c40f; color:#000; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; font-weight:bold; white-space: nowrap;'>📦 MOQ: {row['moq']}</span>"
-                    if row['capacity']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>💧 {row['capacity']}</span>"
-                    if row['materials']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>🛠️ {', '.join(row['materials'])}</span>"
+                    # --- הטיפול המלא והנכון בתגיות, גלישה, וצבעים ---
+                    tags_html = "<div style='display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;'>"
                     
-                    # --- העיצוב החדש והבולט של תגית הקטגוריה (זהב יוקרתי) ---
-                    if row['categories']: tags_html += f"<span style='background:#BF9B30; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap; font-weight:bold;'>🏷️ {', '.join(row['categories'])}</span>"
+                    # הצגת MOQ (זהב או אדום)
+                    moq_val = format_moq_display(row['moq'])
+                    if moq_val == "NAN":
+                        tags_html += f"<span style='background:#e74c3c; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; white-space: nowrap;'>📦 MOQ: NAN</span>"
+                    else:
+                        tags_html += f"<span style='background:#f1c40f; color:#000; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:bold; white-space: nowrap;'>📦 MOQ: {moq_val}</span>"
 
+                    if row['capacity']: 
+                        tags_html += f"<span style='background:#eee; color:#333; padding:3px 8px; border-radius:4px; font-size:11px; white-space: nowrap;'>💧 {row['capacity']}</span>"
+                    
+                    # הצגת קטגוריות בצבע אפור-כהה אלגנטי
+                    if row['categories']:
+                        for cat in row['categories']:
+                            tags_html += f"<span style='background:#333; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; white-space: nowrap;'>🏷️ {cat}</span>"
+                    
+                    tags_html += "</div>"
+
+                    # הפרדת מידע וניקוי כפילויות MOQ וסינית
                     general_info, price_info, packing_info, delivery_info, sample_info, other_info = [], [], [], [], [], []
                     for detail in row['display_list']:
                         if contains_chinese(detail): continue
                         
                         d_up = detail.upper()
+                        # מתעלמים לחלוטין משורת ה-MOQ כאן כי היא כבר מוצגת למעלה בבולט
+                        if 'MOQ' in d_up: continue
+                        
                         if 'USD' in d_up or 'PRICE' in d_up: price_info.append(detail)
                         elif any(x in d_up for x in ['PACKING', 'OPP', 'BOX', 'CTN', 'MEAS', 'G.W', 'N.W', 'KGS']): packing_info.append(detail)
                         elif 'SAMPLE' in d_up and any(x in d_up for x in ['TIME', 'DAY', 'LEAD']): sample_info.append(detail)
@@ -375,15 +443,17 @@ if not df.empty and should_show_results:
                         elif any(x in d_up for x in ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']): general_info.append(detail)
                         else: other_info.append(detail)
                     
-                    html_content = '<div style="display: flex; flex-direction: column; height: 620px;">'
-                    html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; background-color: #fff; flex-shrink: 0;">{img_html}</div>'
-                    html_content += f'<div style="min-height: 30px; text-align: left; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
+                    html_content = '<div style="display: flex; flex-direction: column; height: 680px;">'
+                    html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; background-color: #fff; flex-shrink: 0; border-radius: 8px;">{img_html}</div>'
+                    html_content += f'<div style="min-height: 40px; text-align: left; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
                     html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; font-family: sans-serif; line-height: 1.5; padding-right: 5px;">'
+                    
                     for info in general_info: html_content += f"<div style='font-weight: 800; font-size: 14px; color: #222; margin-bottom: 5px;'>{info}</div>"
                     for info in sample_info: html_content += f"<div style='font-size: 13px; color: #d35400; font-weight: 700; margin-bottom: 3px;'>⏱️ {info}</div>"
                     for info in delivery_info: html_content += f"<div style='font-size: 13px; color: #444; font-weight: 600; margin-bottom: 2px;'>🚚 {info}</div>"
                     for info in packing_info: html_content += f"<div style='font-size: 13px; color: #666; margin-bottom: 2px;'>📦 {info}</div>"
                     for info in other_info: html_content += f"<div style='font-size: 12px; color: #888;'>• {info}</div>"
+                    
                     html_content += '</div>'
                     html_content += '<div style="flex-shrink: 0; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; text-align: left;">'
                     for info in price_info: html_content += f"<div style='color: #27ae60; font-weight: 900; font-size: 15px; margin-bottom: 3px; line-height: 1.2;'>💰 {info}</div>"
