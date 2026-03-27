@@ -19,6 +19,19 @@ FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
+# --- מילון קטגוריות (חדש) ---
+CATEGORY_MAP = {
+    "טכנולוגיה וגאדג'טים": ["usb", "power bank", "speaker", "charger", "cable", "wireless", "mouse", "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
+    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "jump rope"],
+    "בקבוקים, כוסות ושתייה": ["bottle", "mug", "cup", "tumbler", "flask", "drinkware", "thermos", "shaker", "glass", "straw"],
+    "עטים וכלי כתיבה": ["pen", "pencil", "notebook", "notepad", "stylus", "marker", "highlighter", "stationery", "diary"],
+    "תיקים וארנקים": ["bag", "backpack", "tote", "pouch", "wallet", "drawstring", "duffel", "briefcase", "cooler", "luggage"],
+    "טקסטיל וביגוד": ["shirt", "t-shirt", "cap", "hat", "jacket", "apron", "socks", "apparel", "wear"],
+    "לבית ולמשרד": ["clock", "desk", "organizer", "frame", "lamp", "light", "home", "office", "mouse pad", "lanyard", "keychain"],
+    "עונות (קיץ/חורף)": ["summer", "winter", "umbrella", "fan", "sunglasses", "ice", "warm", "blanket", "beanie", "scarf"],
+    "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
+}
+
 # --- עיצוב CSS ---
 st.markdown("""
     <style>
@@ -123,6 +136,18 @@ def extract_materials(full_text):
     if 'ceramic' in text_lower: materials.append('Ceramic')
     return list(set(materials))
 
+# --- פונקציה חדשה: חילוץ קטגוריות ---
+def extract_categories(full_text):
+    found_categories = []
+    text_lower = full_text.lower()
+    for cat, keywords in CATEGORY_MAP.items():
+        for kw in keywords:
+            # שימוש ב- \b מבטיח שנחפש מילה שלמה. למשל 'pen' לא יתפוס 'open'
+            if re.search(r'\b' + re.escape(kw) + r'\b', text_lower):
+                found_categories.append(cat)
+                break
+    return found_categories
+
 def transform_he_to_en(text):
     he_en_map = {'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g', 'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n', 'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u', 'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y', 'ז': 'z'}
     return "".join([he_en_map.get(char, char) for char in text.lower()])
@@ -133,7 +158,6 @@ def normalize_text(text):
 
 def get_gdrive_service():
     try:
-        # כאן בוצע העדכון למשיכה מהקובץ constants.py
         encoded_key = constants.GCP_SERVICE_ACCOUNT 
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
         info = json.loads(decoded_key)
@@ -215,7 +239,8 @@ def load_all_data():
                             'moq': extract_moq(details),
                             'delivery_days': extract_delivery_days(details),
                             'capacity': extract_capacity(full_text_str),
-                            'materials': extract_materials(full_text_str)
+                            'materials': extract_materials(full_text_str),
+                            'categories': extract_categories(full_text_str) # --- התוספת לתיוג הקטגוריות ---
                         })
         except: continue
     
@@ -234,11 +259,13 @@ df, img_map = load_all_data()
 # --- תפריט צד ---
 with st.sidebar:
     st.header("⚙️ סינון חכם")
+    
+    # --- הפילטר החדש של הקטגוריות ---
+    available_categories = list(CATEGORY_MAP.keys())
+    selected_categories = st.multiselect("קטגוריה (Category)", available_categories, placeholder="בחר קטגוריות...")
+    
     price_min, price_max = st.slider("טווח מחיר ליח' (USD)", min_value=0.0, max_value=30.0, value=(0.0, 30.0), step=0.1)
-    
-    # --- התיקון של ה-MOQ: מתחיל כריק (None) ---
     max_moq = st.number_input("MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500)
-    
     max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
     
     available_materials = ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"]
@@ -282,11 +309,11 @@ if not df.empty and search_input:
         results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
     
     if not results.empty:
+        # --- לוגיקת הסינון החדשה של קטגוריות ---
+        if selected_categories: results = results[results['categories'].apply(lambda cats: any(c in cats for c in selected_categories))]
+        
         if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
-        
-        # --- התיקון השני של ה-MOQ: סינון רק אם הוכנס מספר ---
         if max_moq is not None: results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
-        
         if max_delivery < 90: results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
         if selected_materials: results = results[results['materials'].apply(lambda x: any(m in x for m in selected_materials))]
         if selected_capacities: results = results[results['capacity'].isin(selected_capacities)]
@@ -332,7 +359,10 @@ if not df.empty and search_input:
                     tags_html = ""
                     if row['moq']: tags_html += f"<span style='background:#f1c40f; color:#000; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; font-weight:bold; white-space: nowrap;'>📦 MOQ: {row['moq']}</span>"
                     if row['capacity']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>💧 {row['capacity']}</span>"
-                    if row['materials']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; white-space: nowrap;'>🛠️ {', '.join(row['materials'])}</span>"
+                    if row['materials']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>🛠️ {', '.join(row['materials'])}</span>"
+                    
+                    # --- הצגת תגיות הקטגוריה על המוצר ---
+                    if row['categories']: tags_html += f"<span style='background:#d1d8e0; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>🏷️ {', '.join(row['categories'])}</span>"
 
                     general_info, price_info, packing_info, delivery_info, sample_info, other_info = [], [], [], [], [], []
                     for detail in row['display_list']:
