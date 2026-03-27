@@ -19,7 +19,7 @@ FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
-# --- מילון קטגוריות (חדש) ---
+# --- מילון קטגוריות ---
 CATEGORY_MAP = {
     "טכנולוגיה וגאדג'טים": ["usb", "power bank", "speaker", "charger", "cable", "wireless", "mouse", "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
     "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "jump rope"],
@@ -136,13 +136,11 @@ def extract_materials(full_text):
     if 'ceramic' in text_lower: materials.append('Ceramic')
     return list(set(materials))
 
-# --- פונקציה חדשה: חילוץ קטגוריות ---
 def extract_categories(full_text):
     found_categories = []
     text_lower = full_text.lower()
     for cat, keywords in CATEGORY_MAP.items():
         for kw in keywords:
-            # שימוש ב- \b מבטיח שנחפש מילה שלמה. למשל 'pen' לא יתפוס 'open'
             if re.search(r'\b' + re.escape(kw) + r'\b', text_lower):
                 found_categories.append(cat)
                 break
@@ -240,7 +238,7 @@ def load_all_data():
                             'delivery_days': extract_delivery_days(details),
                             'capacity': extract_capacity(full_text_str),
                             'materials': extract_materials(full_text_str),
-                            'categories': extract_categories(full_text_str) # --- התוספת לתיוג הקטגוריות ---
+                            'categories': extract_categories(full_text_str) 
                         })
         except: continue
     
@@ -260,7 +258,6 @@ df, img_map = load_all_data()
 with st.sidebar:
     st.header("⚙️ סינון חכם")
     
-    # --- הפילטר החדש של הקטגוריות ---
     available_categories = list(CATEGORY_MAP.keys())
     selected_categories = st.multiselect("קטגוריה (Category)", available_categories, placeholder="בחר קטגוריות...")
     
@@ -298,18 +295,20 @@ with st.sidebar:
 # --- חיפוש ותצוגה ---
 search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
 
-if not df.empty and search_input:
+# הלוגיקה החדשה: מציגים אם יש חיפוש טקסט או אם בחרו מסנן בסיידבר
+should_show_results = bool(search_input.strip()) or bool(selected_categories) or bool(selected_materials) or bool(selected_capacities)
+
+if not df.empty and should_show_results:
     service = get_gdrive_service()
+    results = df.copy()
     
-    if search_input.strip().upper() == "ALL":
-        results = df.copy()
-    else:
+    # סינון טקסט (רק אם הקלידו משהו וזה לא ALL)
+    if search_input.strip() and search_input.strip().upper() != "ALL":
         term = normalize_text(search_input)
         term_trans = normalize_text(transform_he_to_en(search_input))
-        results = df[df['normalized_text'].str.contains(term, na=False) | df['normalized_text'].str.contains(term_trans, na=False)].copy()
+        results = results[results['normalized_text'].str.contains(term, na=False) | results['normalized_text'].str.contains(term_trans, na=False)]
     
     if not results.empty:
-        # --- לוגיקת הסינון החדשה של קטגוריות ---
         if selected_categories: results = results[results['categories'].apply(lambda cats: any(c in cats for c in selected_categories))]
         
         if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
@@ -361,8 +360,8 @@ if not df.empty and search_input:
                     if row['capacity']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>💧 {row['capacity']}</span>"
                     if row['materials']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>🛠️ {', '.join(row['materials'])}</span>"
                     
-                    # --- הצגת תגיות הקטגוריה על המוצר ---
-                    if row['categories']: tags_html += f"<span style='background:#d1d8e0; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>🏷️ {', '.join(row['categories'])}</span>"
+                    # --- העיצוב החדש והבולט של תגית הקטגוריה (זהב יוקרתי) ---
+                    if row['categories']: tags_html += f"<span style='background:#BF9B30; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap; font-weight:bold;'>🏷️ {', '.join(row['categories'])}</span>"
 
                     general_info, price_info, packing_info, delivery_info, sample_info, other_info = [], [], [], [], [], []
                     for detail in row['display_list']:
