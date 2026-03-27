@@ -33,23 +33,35 @@ CATEGORY_MAP = {
     "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
 }
 
-# --- 4. עיצוב CSS ---
+# --- 4. עיצוב CSS מתוקן ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
-    /* הבלטת כותרות סיידבר */
-    section[data-testid="stSidebar"] h2 {
-        color: #BF9B30 !important;
-        font-weight: 800 !important;
-        border-bottom: 2px solid #BF9B30;
-        padding-bottom: 5px;
-        margin-bottom: 15px !important;
+    /* העלאת כל התוכן של הסיידבר למעלה (ביטול השטח הריק) */
+    section[data-testid="stSidebar"] .block-container {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
     }
 
-    section[data-testid="stSidebar"] { overflow-x: hidden !important; }
+    /* עיצוב כותרות סיידבר - מודרני, נקי וכהה */
+    section[data-testid="stSidebar"] h2 {
+        color: #111 !important;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 1.4rem !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 15px !important;
+        letter-spacing: 0.5px;
+    }
+    
+    /* מניעת חריגה של תיבת הבחירה מחוץ לגבולות הסיידבר */
+    .stMultiSelect div[data-baseweb="select"] {
+        max-width: 100% !important;
+    }
     
     .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
     
@@ -343,7 +355,7 @@ with st.sidebar:
             st.session_state.selected_items = {}
             st.rerun()
 
-    # ריווח בתחתית הסיידבר למניעת חיתוך טקסט
+    # ריווח בתחתית הסיידבר
     st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
 
 # --- 9. חיפוש ותצוגה ---
