@@ -291,6 +291,9 @@ with st.sidebar:
         if st.button("🗑️ נקה רשימה", use_container_width=True):
             st.session_state.selected_items = {}
             st.rerun()
+            
+    # --- תוספת: בלוק ריווח שקוף כדי שהטקסט לא ייחתך בתחתית הסיידבר ---
+    st.markdown("<div style='height: 50px;'></div>", unsafe_allow_html=True)
 
 # --- חיפוש ותצוגה ---
 search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
