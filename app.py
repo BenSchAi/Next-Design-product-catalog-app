@@ -12,17 +12,17 @@ import constants  # <--- חיבור לקובץ ה-Base64 שלך
 
 st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
 
-# --- הגדרות קבועות ---
+# --- הגדרות קבועות (מעודכן לכונן משותף) ---
 FOLDER_ID_EXCELS = "1x7bE0YmGhrK_-0f06ixwlOKqquV_8AHZ"
 FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
 
-# --- מילון קטגוריות מורחב ---
+# --- מילון קטגוריות ---
 CATEGORY_MAP = {
-    "טכנולוגיה וגאדג'טים": ["usb", "power", "speaker", "charger", "cable", "wireless", "mouse", "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
-    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "bottle", "cooler", "flask"],
+    "טכנולוגיה וגאדג'טים": ["usb", "power bank", "speaker", "charger", "cable", "wireless", "mouse", "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
+    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "jump rope"],
     "בקבוקים, כוסות ושתייה": ["bottle", "mug", "cup", "tumbler", "flask", "drinkware", "thermos", "shaker", "glass", "straw"],
     "עטים וכלי כתיבה": ["pen", "pencil", "notebook", "notepad", "stylus", "marker", "highlighter", "stationery", "diary"],
     "תיקים וארנקים": ["bag", "backpack", "tote", "pouch", "wallet", "drawstring", "duffel", "briefcase", "cooler", "luggage"],
@@ -32,28 +32,12 @@ CATEGORY_MAP = {
     "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
 }
 
-# --- עיצוב CSS מתקדם ---
+# --- עיצוב CSS ---
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
-    
-    /* הבלטת כותרות בסיידבר */
-    section[data-testid="stSidebar"] h2 {
-        color: #BF9B30 !important;
-        font-weight: 800 !important;
-        font-size: 1.5rem !important;
-        border-right: 4px solid #BF9B30;
-        padding-right: 10px;
-        margin-bottom: 20px !important;
-    }
-
-    /* תיקון רוחב סיידבר ומניעת דחיקה */
-    section[data-testid="stSidebar"] .block-container {
-        padding-right: 1rem !important;
-        padding-left: 1rem !important;
-    }
     
     .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
     
@@ -62,27 +46,31 @@ st.markdown("""
         padding: 15px 20px !important; font-size: 16px !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     }
-    
+    .stTextInput > div > div > input:focus {
+        border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
+
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-        background-color: white; padding: 15px !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background-color: white; padding: 15px !important; position: relative;
+    }
+    div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {
+        transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
     }
     
     .email-btn {
         display: block; width: 100%; text-align: center; background-color: #27ae60;
-        color: white !important; padding: 12px; border-radius: 8px; text-decoration: none;
-        font-weight: bold; margin-top: 20px;
+        color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
+        font-weight: bold; margin-top: 20px; transition: background-color 0.3s;
     }
+    .email-btn:hover { background-color: #219653; }
     
-    /* עיצוב סל הקניות למניעת חיתוך */
-    .cart-container {
-        padding: 15px;
-        background-color: #f9f9f9;
-        border-radius: 10px;
-        border: 1px solid #eee;
-        margin-bottom: 20px;
-    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #999; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -153,8 +141,7 @@ def extract_categories(full_text):
     text_lower = full_text.lower()
     for cat, keywords in CATEGORY_MAP.items():
         for kw in keywords:
-            # שימוש בחיפוש גמיש יותר ללא גבולות מילה נוקשים (למשל לתפוס bottles)
-            if kw in text_lower:
+            if re.search(r'\b' + re.escape(kw) + r'\b', text_lower):
                 found_categories.append(cat)
                 break
     return found_categories
@@ -272,23 +259,20 @@ with st.sidebar:
     st.header("⚙️ סינון חכם")
     
     available_categories = list(CATEGORY_MAP.keys())
-    selected_categories = st.multiselect("בחר קטגוריה", available_categories, placeholder="בחר קטגוריות...")
+    selected_categories = st.multiselect("קטגוריה (Category)", available_categories, placeholder="בחר קטגוריות...")
     
     price_min, price_max = st.slider("טווח מחיר ליח' (USD)", min_value=0.0, max_value=30.0, value=(0.0, 30.0), step=0.1)
-    max_moq = st.number_input("MOQ מקסימלי", min_value=0, value=None, placeholder="ללא הגבלה...", step=500)
+    max_moq = st.number_input("MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500)
     max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
     
     available_materials = ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"]
-    selected_materials = st.multiselect("בחר חומר", available_materials, placeholder="בחר חומרים...")
-    
     available_capacities = sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
-    selected_capacities = st.multiselect("בחר נפח", available_capacities, placeholder="בחר נפחים...")
+    
+    selected_materials = st.multiselect("חומר (Material)", available_materials, placeholder="בחר חומרים...")
+    selected_capacities = st.multiselect("נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)...")
     
     st.divider()
-    
-    # --- עגלת קניות משופרת ---
     st.header("🛒 מוצרים לשליחה")
-    st.write('<div class="cart-container">', unsafe_allow_html=True)
     if not st.session_state.selected_items:
         st.info("לא נבחרו מוצרים עדיין.")
     else:
@@ -307,20 +291,18 @@ with st.sidebar:
         if st.button("🗑️ נקה רשימה", use_container_width=True):
             st.session_state.selected_items = {}
             st.rerun()
-    st.write('</div>', unsafe_allow_html=True)
-            
-    # הגדלת הריווח בתחתית
-    st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
 
 # --- חיפוש ותצוגה ---
 search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
 
+# הלוגיקה החדשה: מציגים אם יש חיפוש טקסט או אם בחרו מסנן בסיידבר
 should_show_results = bool(search_input.strip()) or bool(selected_categories) or bool(selected_materials) or bool(selected_capacities)
 
 if not df.empty and should_show_results:
     service = get_gdrive_service()
     results = df.copy()
     
+    # סינון טקסט (רק אם הקלידו משהו וזה לא ALL)
     if search_input.strip() and search_input.strip().upper() != "ALL":
         term = normalize_text(search_input)
         term_trans = normalize_text(transform_he_to_en(search_input))
@@ -328,6 +310,7 @@ if not df.empty and should_show_results:
     
     if not results.empty:
         if selected_categories: results = results[results['categories'].apply(lambda cats: any(c in cats for c in selected_categories))]
+        
         if price_min > 0.0 or price_max < 30.0: results = results[results['min_price'].apply(lambda x: x is not None and price_min <= x <= price_max)]
         if max_moq is not None: results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
         if max_delivery < 90: results = results[results['delivery_days'].apply(lambda x: x is not None and x <= max_delivery)]
@@ -345,7 +328,7 @@ if not df.empty and should_show_results:
                 with st.container(border=True):
                     is_selected = unique_item_id in st.session_state.selected_items
                     
-                    if st.checkbox("➕ בחר", value=is_selected, key=f"chk_{unique_item_id}"):
+                    if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
                         if not is_selected:
                             st.session_state.selected_items[unique_item_id] = row
                             st.rerun()
@@ -365,35 +348,48 @@ if not df.empty and should_show_results:
                     
                     if img_id:
                         img_b64 = get_image_base64(service, img_id)
-                        img_html = f'<img src="data:image/jpeg;base64,{img_b64}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;">' if img_b64 else '📷'
+                        if img_b64:
+                            img_html = f'<img src="data:image/jpeg;base64,{img_b64}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;">'
+                        else:
+                            img_html = '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
                     else:
-                        img_html = '📷'
+                        img_html = '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
                     
                     tags_html = ""
-                    if row['moq']: tags_html += f"<span style='background:#f1c40f; color:#000; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; font-weight:bold;'>📦 MOQ: {row['moq']}</span>"
-                    if row['capacity']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px;'>💧 {row['capacity']}</span>"
-                    if row['categories']: tags_html += f"<span style='background:#BF9B30; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; margin-right:4px; font-weight:bold;'>🏷️ {', '.join(row['categories'])}</span>"
+                    if row['moq']: tags_html += f"<span style='background:#f1c40f; color:#000; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; font-weight:bold; white-space: nowrap;'>📦 MOQ: {row['moq']}</span>"
+                    if row['capacity']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>💧 {row['capacity']}</span>"
+                    if row['materials']: tags_html += f"<span style='background:#eee; padding:2px 6px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap;'>🛠️ {', '.join(row['materials'])}</span>"
+                    
+                    # --- העיצוב החדש והבולט של תגית הקטגוריה (זהב יוקרתי) ---
+                    if row['categories']: tags_html += f"<span style='background:#BF9B30; color:#fff; padding:3px 8px; border-radius:4px; font-size:11px; margin-right:4px; white-space: nowrap; font-weight:bold;'>🏷️ {', '.join(row['categories'])}</span>"
 
                     general_info, price_info, packing_info, delivery_info, sample_info, other_info = [], [], [], [], [], []
                     for detail in row['display_list']:
-                        if not contains_chinese(detail):
-                            d_up = detail.upper()
-                            if 'USD' in d_up or 'PRICE' in d_up: price_info.append(detail)
-                            elif any(x in d_up for x in ['PACKING', 'BOX', 'CTN']): packing_info.append(detail)
-                            elif 'SAMPLE' in d_up: sample_info.append(detail)
-                            elif 'DELIVERY' in d_up or 'LEAD TIME' in d_up: delivery_info.append(detail)
-                            else: other_info.append(detail)
+                        if contains_chinese(detail): continue
+                        
+                        d_up = detail.upper()
+                        if 'USD' in d_up or 'PRICE' in d_up: price_info.append(detail)
+                        elif any(x in d_up for x in ['PACKING', 'OPP', 'BOX', 'CTN', 'MEAS', 'G.W', 'N.W', 'KGS']): packing_info.append(detail)
+                        elif 'SAMPLE' in d_up and any(x in d_up for x in ['TIME', 'DAY', 'LEAD']): sample_info.append(detail)
+                        elif any(x in d_up for x in ['DELIVERY', 'DAYS', 'LEAD TIME', 'VALIDITY']): delivery_info.append(detail)
+                        elif any(x in d_up for x in ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']): general_info.append(detail)
+                        else: other_info.append(detail)
                     
-                    html_content = '<div style="display: flex; flex-direction: column; height: 640px;">'
-                    html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; background-color: #fff;">{img_html}</div>'
-                    html_content += f'<div style="padding: 10px 0;">{tags_html}</div>'
-                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; font-size: 13px;">'
-                    for info in other_info[:5]: html_content += f"<div>• {info}</div>"
+                    html_content = '<div style="display: flex; flex-direction: column; height: 620px;">'
+                    html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; background-color: #fff; flex-shrink: 0;">{img_html}</div>'
+                    html_content += f'<div style="min-height: 30px; text-align: left; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
+                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; font-family: sans-serif; line-height: 1.5; padding-right: 5px;">'
+                    for info in general_info: html_content += f"<div style='font-weight: 800; font-size: 14px; color: #222; margin-bottom: 5px;'>{info}</div>"
+                    for info in sample_info: html_content += f"<div style='font-size: 13px; color: #d35400; font-weight: 700; margin-bottom: 3px;'>⏱️ {info}</div>"
+                    for info in delivery_info: html_content += f"<div style='font-size: 13px; color: #444; font-weight: 600; margin-bottom: 2px;'>🚚 {info}</div>"
+                    for info in packing_info: html_content += f"<div style='font-size: 13px; color: #666; margin-bottom: 2px;'>📦 {info}</div>"
+                    for info in other_info: html_content += f"<div style='font-size: 12px; color: #888;'>• {info}</div>"
                     html_content += '</div>'
-                    html_content += '<div style="border-top: 1px solid #eee; padding-top: 10px;">'
-                    for info in price_info: html_content += f"<div style='color: #27ae60; font-weight: 900;'>💰 {info}</div>"
+                    html_content += '<div style="flex-shrink: 0; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; text-align: left;">'
+                    for info in price_info: html_content += f"<div style='color: #27ae60; font-weight: 900; font-size: 15px; margin-bottom: 3px; line-height: 1.2;'>💰 {info}</div>"
+                    html_content += f"<div style='font-size: 10px; color: #aaa; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>📂 {row['file_source']}</div>"
                     html_content += '</div></div>'
                     
                     st.markdown(html_content, unsafe_allow_html=True)
     else:
-        st.warning("לא נמצאו תוצאות.")
+        st.warning("לא נמצאו תוצאות התואמות לחיפוש ולסינונים שלך.")
