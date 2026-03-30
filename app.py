@@ -36,8 +36,8 @@ CATEGORY_MAP = {
 # --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
-    /* החלת פונט אריאל בלבד על כל האלמנטים - כל מקום */
-    * {
+    /* 1. אכיפת פונט Arial על *כל* האפליקציה ובמיוחד על הכותרות בסיידבר */
+    html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *, .stText, p, h1, h2, h3, h4, h5, h6 {
         font-family: 'Arial', sans-serif !important;
     }
 
@@ -46,13 +46,12 @@ st.markdown("""
         font-family: 'Material Icons' !important;
     }
 
-    /* פונט Arial עבור כל אלמנט בסידבר */
-    section[data-testid="stSidebar"] * {
+    /* 2. התמקדות ספציפית בכותרות הסיידבר שבתמונה (סינון חכם ומוצרים לשליחה) */
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
         font-family: 'Arial', sans-serif !important;
-    }
-
-    section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] label * {
-        font-family: 'Arial', sans-serif !important;
+        font-weight: 700 !important;
     }
 
     #MainMenu {visibility: hidden;}
@@ -101,6 +100,13 @@ st.markdown("""
         width: 100%;
     }
     
+    /* 5. תיקון טקסט מעל סליידרים (כמו 'טווח מחיר ליח') שיהיה RTL */
+    [data-testid="stWidgetLabel"] p {
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: 'Arial', sans-serif !important;
+    }
+    
     /* סליידרים - טקסט RTL, מנגנון LTR */
     section[data-testid="stSidebar"] .stSlider > label,
     section[data-testid="stSidebar"] .stNumberInput > label {
@@ -108,6 +114,7 @@ st.markdown("""
         direction: rtl !important;
         display: block !important;
         width: 100% !important;
+        font-family: 'Arial', sans-serif !important;
     }
     section[data-testid="stSidebar"] .stSlider input[type="range"],
     section[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
@@ -118,7 +125,17 @@ st.markdown("""
         text-align: left !important;
     }
     
-    /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח - Dropdown alignment */
+    /* 3. פתרון סופי לגלישת תפריטי Dropdown (Multiselect/Selectbox) */
+    [data-testid="stVirtualDropdown"] {
+        right: 0 !important;
+        left: auto !important;
+        min-width: 300px !important;
+        max-width: 100vw !important;
+        text-align: right !important;
+        font-family: 'Arial', sans-serif !important;
+    }
+    
+    /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
         direction: rtl !important;
@@ -183,11 +200,11 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
     
-    /* ביטול גלישת רוחב */
+    /* 4. הסרת גלישה אופקית (Horizontal Scroll) מה-body הראשי */
     html, body {
         overflow-x: hidden !important;
     }
-    .block-container {
+    .main, .block-container {
         overflow-x: hidden !important;
     }
     main {
