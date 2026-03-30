@@ -524,7 +524,7 @@ with st.sidebar:
             st.session_state.selected_items = {}
             # אין צורך ב-st.rerun כאן
     st.divider()
-    if st.button("🗑️ Clear Cache", use_container_width=True):
+    if st.button("� Clear Cache", use_container_width=True):
         st.cache_data.clear()
         st.success("Cache cleared!")
         st.rerun()
