@@ -482,6 +482,12 @@ def load_all_data():
 if 'df' not in st.session_state or 'img_map' not in st.session_state:
     st.session_state.df, st.session_state.img_map = load_all_data()
 
+# --- אתחול pagination ---
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 0
+if 'last_filters' not in st.session_state:
+    st.session_state.last_filters = None
+
 
 # --- 8. תפריט צד ---
 with st.sidebar:
@@ -543,10 +549,24 @@ if not df.empty and should_show_results:
     
     if not results.empty:
         results = results.drop_duplicates(subset=['item_key', 'file_source'])
+        
+        # בדיקת שינוי סינונים ואיפוס עמוד
+        current_filters = (search_input, selected_categories, price_min, price_max, max_moq, max_delivery, selected_materials, selected_capacities)
+        if st.session_state.last_filters != current_filters:
+            st.session_state.current_page = 0
+            st.session_state.last_filters = current_filters
+        
+        # הגדרת pagination
+        products_per_page = 12
+        total_products = len(results)
+        start = st.session_state.current_page * products_per_page
+        end = min(start + products_per_page, total_products)
+        page_results = results.iloc[start:end]
+        
         st.write("<br>", unsafe_allow_html=True)
         cols = st.columns(4)
         
-        for i, (_, row) in enumerate(results.iterrows()):
+        for i, (_, row) in enumerate(page_results.iterrows()):
             unique_item_id = f"{row['base_filename']}_{row['row_index']}"
             with cols[i % 4]:
                 with st.container(border=True):
@@ -632,5 +652,22 @@ if not df.empty and should_show_results:
                     html_content += '</div></div>'
                     
                     st.markdown(html_content, unsafe_allow_html=True)
+        
+        # כפתורי ניווט pagination
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_prev, col_info, col_next = st.columns([1, 2, 1])
+        with col_prev:
+            if st.session_state.current_page > 0:
+                if st.button("⬅️ קודם", use_container_width=True):
+                    st.session_state.current_page -= 1
+                    st.rerun()
+        with col_info:
+            total_pages = (total_products + products_per_page - 1) // products_per_page
+            st.markdown(f"<div style='text-align: center; font-weight: bold;'>עמוד {st.session_state.current_page + 1} מתוך {total_pages}</div>", unsafe_allow_html=True)
+        with col_next:
+            if end < total_products:
+                if st.button("הבא ➡️", use_container_width=True):
+                    st.session_state.current_page += 1
+                    st.rerun()
     else:
         st.warning("לא נמצאו תוצאות התואמות לחיפוש ולסינונים שלך.")
