@@ -36,14 +36,23 @@ CATEGORY_MAP = {
 # --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
-    /* החלת פונט אריאל בלבד על כל האלמנטים */
-    html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label, input, button {
+    /* החלת פונט אריאל בלבד על כל האלמנטים - כל מקום */
+    * {
         font-family: 'Arial', sans-serif !important;
     }
 
     /* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
     .material-icons, .stIcon, svg, i {
         font-family: 'Material Icons' !important;
+    }
+
+    /* פונט Arial עבור כל אלמנט בסידבר */
+    section[data-testid="stSidebar"] * {
+        font-family: 'Arial', sans-serif !important;
+    }
+
+    section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] label * {
+        font-family: 'Arial', sans-serif !important;
     }
 
     #MainMenu {visibility: hidden;}
@@ -106,10 +115,18 @@ st.markdown("""
         text-align: left !important;
     }
     
-    /* מניעת חריגה של תיבת הבחירה ויישור לימין */
+    /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
         direction: rtl !important;
+        width: 100% !important;
+    }
+    .stMultiSelect [data-baseweb="popover"] {
+        right: 0 !important;
+        left: auto !important;
+    }
+    .stMultiSelect [data-baseweb="select"] {
+        min-width: 100% !important;
     }
     
     /* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
@@ -153,7 +170,10 @@ st.markdown("""
     
     /* ביטול גלישת רוחב */
     .block-container {
-        overflow-x: auto !important;
+        overflow-x: hidden !important;
+    }
+    main {
+        overflow-x: hidden !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -166,7 +186,7 @@ st.markdown("""
                 <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
             </h1>
         </a>
-        <h3 style="font-family: 'Arial', sans-serif; color: #666; font-weight: 500; margin-top: 5px;">קטלוג חכם לסוכנים 🔎</h3>
+        <h3 style="font-family: 'Arial', sans-serif; color: #666; font-weight: 500; margin-top: 5px;">קטלוג הצעות מחיר ביבוא 🔎</h3>
     </div>
 """, unsafe_allow_html=True)
 
@@ -383,7 +403,7 @@ with st.sidebar:
     available_categories = list(CATEGORY_MAP.keys())
     selected_categories = st.multiselect("קטגוריה (Category)", available_categories, placeholder="בחר קטגוריות...")
     
-    price_min, price_max = st.slider("טווח מחיר ליח' (USD)", min_value=0.0, max_value=30.0, value=(0.0, 30.0), step=0.1)
+    price_min, price_max = st.slider("טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0, value=(0.0, 200.0), step=0.1)
     max_moq = st.number_input("MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500)
     max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
     
