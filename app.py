@@ -553,12 +553,12 @@ if not df.empty and should_show_results:
                     is_selected = unique_item_id in st.session_state.selected_items
                     if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
                         if not is_selected:
-                            # שמור dict ולא Series כדי למנוע באגים של קאשינג/סידור
                             st.session_state.selected_items[unique_item_id] = row.to_dict()
+                            st.rerun()
                     else:
                         if is_selected:
                             del st.session_state.selected_items[unique_item_id]
-                            # אין צורך ב-st.rerun כאן, Streamlit יעדכן את הסטייט אוטומטית
+                            st.rerun()
                     # --- טיפול ביצירת תמונה ---
                     img_id = None
                     base_name_clean = normalize_text(row['base_filename'])
