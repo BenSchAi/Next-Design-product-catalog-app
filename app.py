@@ -487,24 +487,16 @@ if 'df' not in st.session_state or 'img_map' not in st.session_state:
 with st.sidebar:
     df = st.session_state.df
     img_map = st.session_state.img_map
-
-# --- 8. תפריט צד ---
-with st.sidebar:
     st.header("⚙️ סינון חכם")
-    
     available_categories = list(CATEGORY_MAP.keys())
     selected_categories = st.multiselect("קטגוריה (Category)", available_categories, placeholder="בחר קטגוריות...")
-    
     price_min, price_max = st.slider("טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0, value=(0.0, 200.0), step=0.1)
     max_moq = st.number_input("MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500)
     max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
-    
     available_materials = ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"]
     available_capacities = sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
-    
     selected_materials = st.multiselect("חומר (Material)", available_materials, placeholder="בחר חומרים...")
     selected_capacities = st.multiselect("נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)...")
-    
     st.divider()
     st.header("🛒 מוצרים לשליחה")
     if not st.session_state.selected_items:
