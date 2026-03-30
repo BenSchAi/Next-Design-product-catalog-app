@@ -36,47 +36,52 @@ CATEGORY_MAP = {
 # --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
+    /* החלת פונט אריאל נקי על כל האלמנטים */
+    html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label {
+        font-family: 'Arial', sans-serif !important;
+    }
+
+    /* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
+    .material-icons, .stIcon, svg, i {
+        font-family: 'Material Icons' !important;
+    }
+
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
-    /* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח הריק של סטרימליט */
+    /* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח השבור */
     [data-testid="stSidebarHeader"] {
         display: none !important;
     }
     section[data-testid="stSidebar"] .block-container {
-        padding-top: 1rem !important;
+        padding-top: 1.5rem !important;
         padding-bottom: 2rem !important;
     }
 
-    /* יישור גורף לימין (RTL) לסיידבר והתוכן */
-    .block-container, section[data-testid="stSidebar"] {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-
-    /* כותרות סיידבר - יישור לימין (ללא שינוי פונטים) */
+    /* עיצוב כותרות סיידבר - אריאל, צבע כחול-נייבי עמוק, יישור לימין */
     section[data-testid="stSidebar"] h2 {
-        color: #000 !important;
+        color: #1E3A8A !important; 
         font-weight: 900 !important;
         font-size: 1.6rem !important;
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
-        margin-bottom: 15px !important;
+        border-bottom: 3px solid #BFDBFE !important;
+        padding-bottom: 6px !important;
+        margin-bottom: 18px !important;
         margin-top: 0 !important;
-        direction: rtl !important;
         text-align: right !important;
-        display: block; width: 100%;
+        direction: rtl !important;
+        width: 100%;
+        display: block;
     }
 
-    /* תוויות סיידבר (קטגוריה, מחיר וכו') - מודגשות ומיושרות לימין */
-    section[data-testid="stSidebar"] label p, .stMultiSelect label p, .stSlider label p, .stNumberInput label p {
-        color: #222 !important;
-        font-weight: 800 !important;
+    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין */
+    section[data-testid="stSidebar"] label p {
+        color: #334155 !important;
+        font-weight: 700 !important;
         font-size: 15px !important;
-        direction: rtl !important;
         text-align: right !important;
-        display: block; width: 100%;
+        direction: rtl !important;
+        width: 100%;
     }
     
     /* מניעת חריגה של תיבת הבחירה ויישור לימין */
@@ -84,37 +89,26 @@ st.markdown("""
         max-width: 100% !important;
         direction: rtl !important;
     }
-
-    /* --- תיקון קריטי לסליידרים ---
-       הסליידר עצמו חייב להיות משמאל לימין כדי שהפס האדום לא יישבר! */
-    .stSlider, .stNumberInput {
-        direction: ltr !important;
-    }
     
-    /* העלמת הפס האפור (גלילה אופקית) */
-    .block-container { overflow-x: hidden; }
-    section[data-testid="stSidebar"] { overflow-x: hidden !important; }
-    
-    /* שורת חיפוש ראשית באנגלית - מיושרת לשמאל */
+    /* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
     .stTextInput > div > div > input {
         border-radius: 30px !important; border: 2px solid #eaeaea !important;
         padding: 15px 20px !important; font-size: 16px !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
-        direction: ltr !important;
         text-align: left !important;
+        direction: ltr !important;
     }
     .stTextInput > div > div > input:focus {
         border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
 
-    /* כרטיסיות מוצרים מיושרות לימין */
+    /* כרטיסיות המוצרים - אנגלית, משמאל לימין LTR */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         background-color: white; padding: 15px !important; position: relative;
-        direction: rtl !important;
-        text-align: right !important;
+        direction: ltr !important; text-align: left !important;
     }
     div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {
         transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
@@ -127,10 +121,16 @@ st.markdown("""
     }
     .email-btn:hover { background-color: #219653; }
     
-    ::-webkit-scrollbar { width: 6px; }
+    /* פס גלילה נקי */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
+    
+    /* העלמת גלישת רוחב מעצבנת */
+    .block-container {
+        overflow-x: hidden;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -142,7 +142,7 @@ st.markdown("""
                 <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
             </h1>
         </a>
-        <h3 style="color: #666; font-weight: 400; margin-top: 5px; font-family: 'Arial', sans-serif;">קטלוג חכם לסוכנים 🔎</h3>
+        <h3 style="font-family: 'Arial', sans-serif; color: #666; font-weight: 500; margin-top: 5px;">קטלוג חכם לסוכנים 🔎</h3>
     </div>
 """, unsafe_allow_html=True)
 
@@ -455,8 +455,8 @@ if not df.empty and should_show_results:
                     else:
                         img_html = '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
                     
-                    # --- הטיפול המלא והנכון בתגיות, גלישה, וצבעים ---
-                    tags_html = "<div style='display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; direction: rtl;'>"
+                    # --- הטיפול המלא והנכון בתגיות, גלישה, וצבעים (LTR לאנגלית) ---
+                    tags_html = "<div style='display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; direction: ltr;'>"
                     
                     # הצגת MOQ (זהב או אדום)
                     moq_val = format_moq_display(row['moq'])
@@ -491,10 +491,10 @@ if not df.empty and should_show_results:
                         elif any(x in d_up for x in ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']): general_info.append(detail)
                         else: other_info.append(detail)
                     
-                    html_content = '<div style="display: flex; flex-direction: column; height: 680px; direction: rtl; text-align: right;">'
+                    html_content = '<div style="display: flex; flex-direction: column; height: 680px; direction: ltr; text-align: left;">'
                     html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; background-color: #fff; flex-shrink: 0; border-radius: 8px;">{img_html}</div>'
-                    html_content += f'<div style="min-height: 40px; text-align: right; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
-                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: right; line-height: 1.5; padding-right: 5px;">'
+                    html_content += f'<div style="min-height: 40px; text-align: left; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
+                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; line-height: 1.5; padding-right: 5px;">'
                     
                     for info in general_info: html_content += f"<div style='font-weight: 800; font-size: 14px; color: #222; margin-bottom: 5px;'>{info}</div>"
                     for info in sample_info: html_content += f"<div style='font-size: 13px; color: #d35400; font-weight: 700; margin-bottom: 3px;'>⏱️ {info}</div>"
@@ -503,7 +503,7 @@ if not df.empty and should_show_results:
                     for info in other_info: html_content += f"<div style='font-size: 12px; color: #888;'>• {info}</div>"
                     
                     html_content += '</div>'
-                    html_content += '<div style="flex-shrink: 0; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; text-align: right;">'
+                    html_content += '<div style="flex-shrink: 0; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; text-align: left;">'
                     for info in price_info: html_content += f"<div style='color: #27ae60; font-weight: 900; font-size: 15px; margin-bottom: 3px; line-height: 1.2;'>💰 {info}</div>"
                     html_content += f"<div style='font-size: 10px; color: #aaa; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>📂 {row['file_source']}</div>"
                     html_content += '</div></div>'
