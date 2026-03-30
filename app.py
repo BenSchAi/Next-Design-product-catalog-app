@@ -40,30 +40,36 @@ st.markdown("""
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
-    /* העלאת כל התוכן של הסיידבר למעלה (ביטול השטח הריק) */
+    /* העלאת כל התוכן של הסיידבר למעלה (ביטול השטח הריק של סטרימליט) */
+    [data-testid="stSidebarHeader"] {
+        padding: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+    }
     section[data-testid="stSidebar"] .block-container {
-        padding-top: 1rem !important;
+        padding-top: 1.5rem !important;
         padding-bottom: 2rem !important;
     }
 
-    /* עיצוב כותרות סיידבר - פונט אריאל מודרני ובולט */
+    /* עיצוב כותרות סיידבר - פונט מודרני, נקי ויוקרתי */
     section[data-testid="stSidebar"] h2 {
-        color: #000 !important;
-        font-family: 'Arial', sans-serif !important;
-        font-weight: 900 !important;
-        font-size: 1.6rem !important;
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
-        margin-bottom: 15px !important;
+        color: #2C3E50 !important; /* אפור-כחלחל עמוק */
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+        font-weight: 800 !important;
+        font-size: 1.4rem !important;
+        border-bottom: 2px solid #E2E8F0 !important; /* קו הפרדה עדין מתחת לכותרת */
+        padding-bottom: 8px !important;
+        margin-bottom: 18px !important;
         margin-top: 0 !important;
     }
 
     /* הדגשת תוויות הסינון בסיידבר (קטגוריה, טווח מחיר וכו') */
     section[data-testid="stSidebar"] label p {
-        font-family: 'Arial', sans-serif !important;
-        font-weight: 800 !important;
-        color: #222 !important;
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+        font-weight: 700 !important; /* פונט מודגש */
+        color: #1E293B !important; /* אפור כהה מאוד לקריאות */
         font-size: 15px !important;
+        letter-spacing: 0.2px !important;
     }
     
     /* מניעת חריגה של תיבת הבחירה מחוץ לגבולות הסיידבר */
