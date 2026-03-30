@@ -307,18 +307,27 @@ def extract_categories(details_list):
     found_categories = set()
     # מילים שמתארות אריזה ולא מוצר (כדי למנוע תיוג בקבוק כתיק)
     packing_keywords = ['OPP BAG', 'POLY BAG', 'PE BAG', 'PACKING', 'MEAS', 'CTN', 'G.W', 'N.W', 'BOX']
-    
+
     text_to_scan = ""
     for line in details_list:
         if not any(pk in line.upper() for pk in packing_keywords):
             text_to_scan += " " + line.lower()
 
+    # חיפוש רגיל לפי מילות מפתח
     for cat, keywords in CATEGORY_MAP.items():
         for kw in keywords:
-            # שימוש בגבולות מילה \b מבטיח ש-cabbage לא יתפס כ-bag
             if re.search(r'\b' + re.escape(kw) + r'\b', text_to_scan):
                 found_categories.add(cat)
-                break
+                # אל תעשה break - אפשר לשייך ליותר מקטגוריה אחת
+
+    # חיישן חכם: כל מוצר שמכיל bottle, flask, tumbler, drinkware, thermos, cooler יקבל גם את 'בקבוקים, כוסות ושתייה' וגם 'עונות (קיץ/חורף)'
+    if re.search(r'\b(bottle|flask|tumbler|drinkware|thermos|cooler)\b', text_to_scan):
+        found_categories.add('בקבוקים, כוסות ושתייה')
+        found_categories.add('עונות (קיץ/חורף)')
+    # כדורגל, כדורסל, טניס וכו' יקבלו ספורט
+    if re.search(r'\b(soccer|football|כדורגל|basketball|tennis|כדורסל|טניס|volleyball|כדורעף|ping pong|table tennis|פינג פונג)\b', text_to_scan):
+        found_categories.add('מחנאות, נופש וספורט')
+
     return list(found_categories)
 
 def extract_min_price(details_list):
@@ -546,13 +555,13 @@ if not df.empty and should_show_results:
             with cols[i % 4]:
                 with st.container(border=True):
                     is_selected = unique_item_id in st.session_state.selected_items
-                    # ייעול: אין st.rerun, רק עדכון state
                     if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
                         if not is_selected:
                             st.session_state.selected_items[unique_item_id] = row
                     else:
                         if is_selected:
                             del st.session_state.selected_items[unique_item_id]
+                            st.experimental_rerun()
                     # --- טיפול ביצירת תמונה ---
                     img_id = None
                     base_name_clean = normalize_text(row['base_filename'])
