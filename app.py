@@ -33,14 +33,21 @@ CATEGORY_MAP = {
     "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
 }
 
-# --- 4. עיצוב CSS ---
+# --- 4. עיצוב CSS חזק יותר עם פונט Heebo ---
 st.markdown("""
     <style>
-    #MainMenu {visibility: hidden;}
+    /* משיכת פונט Heebo המודרני מגוגל */
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
+
+    /* דריסה אגרסיבית של כל הפונטים באתר לפונט העדכני */
+    html, body, [class*="st-"], [class*="css"], p, h1, h2, h3, span, div, label {
+        font-family: 'Heebo', sans-serif !important;
+    }
+
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
-    /* העלאת כל התוכן של הסיידבר למעלה (ביטול השטח הריק של סטרימליט) */
+    /* העלאת כל התוכן של הסיידבר למעלה */
     [data-testid="stSidebarHeader"] {
         padding: 0 !important;
         height: 0 !important;
@@ -51,28 +58,25 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
 
-    /* עיצוב כותרות סיידבר - פונט מודרני, נקי ויוקרתי */
-    section[data-testid="stSidebar"] h2 {
-        color: #2C3E50 !important; /* אפור-כחלחל עמוק */
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-        font-weight: 800 !important;
-        font-size: 1.4rem !important;
-        border-bottom: 2px solid #E2E8F0 !important; /* קו הפרדה עדין מתחת לכותרת */
-        padding-bottom: 8px !important;
+    /* עיצוב כותרות סיידבר - צבע כחול-נייבי עמוק, פונט עבה וקו תכלת */
+    section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h2 {
+        color: #1E3A8A !important; 
+        font-weight: 900 !important;
+        font-size: 1.6rem !important;
+        border-bottom: 3px solid #BFDBFE !important;
+        padding-bottom: 6px !important;
         margin-bottom: 18px !important;
         margin-top: 0 !important;
     }
 
-    /* הדגשת תוויות הסינון בסיידבר (קטגוריה, טווח מחיר וכו') */
+    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם */
     section[data-testid="stSidebar"] label p {
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-        font-weight: 700 !important; /* פונט מודגש */
-        color: #1E293B !important; /* אפור כהה מאוד לקריאות */
+        color: #334155 !important;
+        font-weight: 700 !important;
         font-size: 15px !important;
-        letter-spacing: 0.2px !important;
     }
     
-    /* מניעת חריגה של תיבת הבחירה מחוץ לגבולות הסיידבר */
+    /* מניעת חריגה של תיבת הבחירה */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
     }
@@ -116,11 +120,11 @@ st.markdown("""
 st.markdown("""
     <div style="text-align: center; margin-bottom: 40px; margin-top: 10px;">
         <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration: none;">
-            <h1 style="font-family: 'Arial', sans-serif; font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
+            <h1 style="font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
                 <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
             </h1>
         </a>
-        <h3 style="color: #666; font-weight: 400; margin-top: 5px; font-family: 'Arial', sans-serif;">קטלוג חכם לסוכנים 🔎</h3>
+        <h3 style="color: #666; font-weight: 500; margin-top: 5px;">קטלוג חכם לסוכנים 🔎</h3>
     </div>
 """, unsafe_allow_html=True)
 
@@ -472,7 +476,7 @@ if not df.empty and should_show_results:
                     html_content = '<div style="display: flex; flex-direction: column; height: 680px;">'
                     html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; background-color: #fff; flex-shrink: 0; border-radius: 8px;">{img_html}</div>'
                     html_content += f'<div style="min-height: 40px; text-align: left; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
-                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; font-family: sans-serif; line-height: 1.5; padding-right: 5px;">'
+                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; line-height: 1.5; padding-right: 5px;">'
                     
                     for info in general_info: html_content += f"<div style='font-weight: 800; font-size: 14px; color: #222; margin-bottom: 5px;'>{info}</div>"
                     for info in sample_info: html_content += f"<div style='font-size: 13px; color: #d35400; font-weight: 700; margin-bottom: 3px;'>⏱️ {info}</div>"
