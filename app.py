@@ -36,8 +36,8 @@ CATEGORY_MAP = {
 # --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
-    /* החלת פונט אריאל נקי על כל האלמנטים */
-    html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label {
+    /* החלת פונט אריאל בלבד על כל האלמנטים */
+    html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label, input, button {
         font-family: 'Arial', sans-serif !important;
     }
 
@@ -89,6 +89,23 @@ st.markdown("""
         width: 100%;
     }
     
+    /* סליידרים - טקסט RTL, מנגנון LTR */
+    section[data-testid="stSidebar"] .stSlider > label,
+    section[data-testid="stSidebar"] .stNumberInput > label {
+        text-align: right !important;
+        direction: rtl !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    section[data-testid="stSidebar"] .stSlider input[type="range"],
+    section[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
+        direction: ltr !important;
+    }
+    section[data-testid="stSidebar"] .stNumberInput input {
+        direction: ltr !important;
+        text-align: left !important;
+    }
+    
     /* מניעת חריגה של תיבת הבחירה ויישור לימין */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
@@ -124,6 +141,7 @@ st.markdown("""
         display: block; width: 100%; text-align: center; background-color: #27ae60;
         color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
         font-weight: bold; margin-top: 20px; transition: background-color 0.3s;
+        font-family: 'Arial', sans-serif !important;
     }
     .email-btn:hover { background-color: #219653; }
     
@@ -133,9 +151,9 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
     
-    /* העלמת גלישת רוחב מעצבנת */
+    /* ביטול גלישת רוחב */
     .block-container {
-        overflow-x: hidden;
+        overflow-x: auto !important;
     }
     </style>
 """, unsafe_allow_html=True)
