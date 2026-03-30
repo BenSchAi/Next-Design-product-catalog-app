@@ -69,6 +69,9 @@ st.markdown("""
     }
 
     /* עיצוב כותרות סיידבר - אריאל מפורש, צבע כחול-נייבי עמוק, יישור לימין */
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3,
@@ -115,18 +118,30 @@ st.markdown("""
         text-align: left !important;
     }
     
-    /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח */
+    /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח - Dropdown alignment */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
         direction: rtl !important;
         width: 100% !important;
+        position: relative;
     }
     .stMultiSelect [data-baseweb="popover"] {
+        position: absolute !important;
         right: 0 !important;
         left: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
     }
     .stMultiSelect [data-baseweb="select"] {
-        min-width: 100% !important;
+        width: 100% !important;
+    }
+    /* Selectbox dropdown ימני */
+    .stSelectbox div[data-baseweb="select"] {
+        width: 100% !important;
+    }
+    .stSelectbox [data-baseweb="popover"] {
+        right: 0 !important;
+        left: auto !important;
     }
     
     /* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
@@ -169,6 +184,9 @@ st.markdown("""
     ::-webkit-scrollbar-thumb:hover { background: #999; }
     
     /* ביטול גלישת רוחב */
+    html, body {
+        overflow-x: hidden !important;
+    }
     .block-container {
         overflow-x: hidden !important;
     }
