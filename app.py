@@ -35,227 +35,219 @@ CATEGORY_MAP = {
 
 # --- 4. עיצוב CSS ---
 st.markdown("""
-    <style>
-    /* 1. אכיפת פונט Arial על *כל* האפליקציה ובמיוחד על הכותרות בסיידבר */
-    html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *, .stText, p, h1, h2, h3, h4, h5, h6 {
-        font-family: 'Arial', sans-serif !important;
-    }
+<style>
+/* 1. אכיפת פונט Arial על *כל* האפליקציה ובמיוחד על הכותרות בסיידבר */
+html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *, .stText, p, h1, h2, h3, h4, h5, h6 {
+    font-family: 'Arial', sans-serif !important;
+}
 
-    /* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
-    .material-icons, .stIcon, svg, i {
-        font-family: 'Material Icons' !important;
-    }
+/* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
+.material-icons, .stIcon, svg, i {
+    font-family: 'Material Icons' !important;
+}
 
-    /* 2. התמקדות ספציפית בכותרות הסיידבר שבתמונה (סינון חכם ומוצרים לשליחה) */
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
-        font-family: 'Arial', sans-serif !important;
-        font-weight: 700 !important;
-    }
+/* 2. התמקדות ספציפית בכותרות הסיידבר שבתמונה (סינון חכם ומוצרים לשליחה) */
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {
+    font-family: 'Arial', sans-serif !important;
+    font-weight: 700 !important;
+}
 
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {background-color: transparent !important;}
-    
-    /* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח השבור */
-    [data-testid="stSidebarHeader"] {
-        display: none !important;
-    }
-    section[data-testid="stSidebar"] .block-container {
-        padding-top: 1.5rem !important;
-        padding-bottom: 2rem !important;
-    }
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {background-color: transparent !important;}
 
-    /* עיצוב כותרות סיידבר - אריאל מפורש, צבע כחול-נייבי עמוק, יישור לימין */
-    [data-testid="stSidebar"] h1,
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] .stMarkdown h2 {
-        font-family: 'Arial', sans-serif !important;
-        color: #1E3A8A !important; 
-        font-weight: 900 !important;
-        font-size: 1.6rem !important;
-        border-bottom: 3px solid #BFDBFE !important;
-        padding-bottom: 6px !important;
-        margin-bottom: 18px !important;
-        margin-top: 0 !important;
-        text-align: right !important;
-        direction: rtl !important;
-        width: 100%;
-        display: block;
-    }
+/* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח השבור */
+[data-testid="stSidebarHeader"] {
+    display: none !important;
+}
+section[data-testid="stSidebar"] .block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 2rem !important;
+}
 
-    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין */
-    section[data-testid="stSidebar"] label p {
-        font-family: 'Arial', sans-serif !important;
-        color: #334155 !important;
-        font-weight: 700 !important;
-        font-size: 15px !important;
-        text-align: right !important;
-        direction: rtl !important;
-        width: 100%;
-    }
-    
-    /* 5. תיקון טקסט מעל סליידרים (כמו 'טווח מחיר ליח') שיהיה RTL */
-    [data-testid="stWidgetLabel"] p {
-        direction: rtl !important;
-        text-align: right !important;
-        font-family: 'Arial', sans-serif !important;
-    }
-    
-    /* סליידרים - טקסט RTL, מנגנון LTR */
-    section[data-testid="stSidebar"] .stSlider > label,
-    section[data-testid="stSidebar"] .stNumberInput > label {
-        text-align: right !important;
-        direction: rtl !important;
-        display: block !important;
-        width: 100% !important;
-        font-family: 'Arial', sans-serif !important;
-    }
-    section[data-testid="stSidebar"] .stSlider input[type="range"],
-    section[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
-        direction: ltr !important;
-    }
-    section[data-testid="stSidebar"] .stNumberInput input {
-        direction: ltr !important;
-        text-align: left !important;
-    }
-    
-    /* 3. פתרון סופי וחזק לגלישת תפריטי Dropdown (Multiselect/Selectbox) */
-    /* הקובץ את ה-parent container בposition relative כדי שה-popover יידע למה להתיחס */
-    .stMultiSelect {
-        position: relative !important;
-        width: 100% !important;
-        max-width: 100% !important;
-    }
-    
-    /* הpopover עצמו - נועל את התפריט בתוך רוחב מוגבל והימים הנכון */
-    .stMultiSelect [data-baseweb="popover"] {
-        position: absolute !important;
-        left: 0 !important;
-        right: auto !important;
-        width: fit-content !important;
-        max-width: 280px !important;
-        overflow: hidden !important;
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* גם להנעת stVirtualDropdown */
-    [data-testid="stVirtualDropdown"] {
-        position: absolute !important;
-        left: 0 !important;
-        right: auto !important;
-        max-width: 280px !important;
-        overflow: hidden !important;
-    }
-    
-    /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח */
-    .stMultiSelect div[data-baseweb="select"] {
-        max-width: 100% !important;
-        direction: rtl !important;
-        width: 100% !important;
-        position: relative !important;
-        overflow: visible !important;
-    }
-    
-    /* הpopover של multiselect - פתרון חזק שמונע כל גלישה */
-    .stMultiSelect [data-baseweb="popover"] {
-        position: absolute !important;
-        left: 0 !important;
-        right: auto !important;
-        width: fit-content !important;
-        max-width: 280px !important;
-        min-width: 200px !important;
-        overflow: hidden !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        z-index: 9999 !important;
-    }
-    
-    /* אפשרויות בתוך ה-dropdown */
-    .stMultiSelect [data-baseweb="select"] [role="option"] {
-        word-wrap: break-word !important;
-        white-space: normal !important;
-    }
-    
-    /* Selectbox dropdown ימני */
-    .stSelectbox div[data-baseweb="select"] {
-        width: 100% !important;
-        position: relative !important;
-    }
-    
-    .stSelectbox [data-baseweb="popover"] {
-        position: absolute !important;
-        left: 0 !important;
-        right: auto !important;
-        max-width: 280px !important;
-        overflow: hidden !important;
-    }
-    
-    /* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
-    .stTextInput > div > div > input {
-        font-family: 'Arial', sans-serif !important;
-        border-radius: 30px !important; border: 2px solid #eaeaea !important;
-        padding: 15px 20px !important; font-size: 16px !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
-        text-align: left !important;
-        direction: ltr !important;
-    }
-    .stTextInput > div > div > input:focus {
-        border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-    }
+/* עיצוב כותרות סיידבר - אריאל מפורש, צבע כחול-נייבי עמוק, יישור לימין */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] .stMarkdown h2 {
+    font-family: 'Arial', sans-serif !important;
+    color: #1E3A8A !important; 
+    font-weight: 900 !important;
+    font-size: 1.6rem !important;
+    border-bottom: 3px solid #BFDBFE !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 18px !important;
+    margin-top: 0 !important;
+    text-align: right !important;
+    direction: rtl !important;
+    width: 100%;
+    display: block;
+}
 
-    /* כרטיסיות המוצרים - אנגלית, משמאל לימין LTR */
-    div[data-testid="stVerticalBlock"] > div[style*="border"] {
-        border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        background-color: white; padding: 15px !important; position: relative;
-        direction: ltr !important; text-align: left !important;
-    }
-    div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {
-        transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
-    }
-    
-    .email-btn {
-        display: block; width: 100%; text-align: center; background-color: #27ae60;
-        color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
-        font-weight: bold; margin-top: 20px; transition: background-color 0.3s;
-        font-family: 'Arial', sans-serif !important;
-    }
-    .email-btn:hover { background-color: #219653; }
-    
-    /* פס גלילה נקי */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #999; }
-    
-    /* 4. הסרת גלישה אופקית (Horizontal Scroll) מה-body הראשי */
-    html, body {
-        overflow-x: hidden !important;
-        max-width: 100vw !important;
-    }
-    .main, .block-container {
-        overflow-x: hidden !important;
-        max-width: 100% !important;
-    }
-    main {
-        overflow-x: hidden !important;
-        max-width: 100vw !important;
-    }
-    /* וודא שכל זום יישמר בגבולות הדף */
-    * {
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    </style>
+/* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין */
+section[data-testid="stSidebar"] label p {
+    font-family: 'Arial', sans-serif !important;
+    color: #334155 !important;
+    font-weight: 700 !important;
+    font-size: 15px !important;
+    text-align: right !important;
+    direction: rtl !important;
+    width: 100%;
+}
+
+/* 5. תיקון טקסט מעל סליידרים (כמו 'טווח מחיר ליח') שיהיה RTL */
+[data-testid="stWidgetLabel"] p {
+    direction: rtl !important;
+    text-align: right !important;
+    font-family: 'Arial', sans-serif !important;
+}
+
+/* סליידרים - טקסט RTL, מנגנון LTR */
+section[data-testid="stSidebar"] .stSlider > label,
+section[data-testid="stSidebar"] .stNumberInput > label {
+    text-align: right !important;
+    direction: rtl !important;
+    display: block !important;
+    width: 100% !important;
+    font-family: 'Arial', sans-serif !important;
+}
+section[data-testid="stSidebar"] .stSlider input[type="range"],
+section[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {
+    direction: ltr !important;
+}
+section[data-testid="stSidebar"] .stNumberInput input {
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+/* 3. פתרון סופי וחזק לגלישת תפריטי Dropdown (Multiselect/Selectbox) */
+.stMultiSelect {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+}
+.stMultiSelect [data-baseweb="popover"] {
+    position: absolute !important;
+    left: 0 !important;
+    right: auto !important;
+    width: fit-content !important;
+    max-width: 280px !important;
+    min-width: 200px !important;
+    overflow: hidden !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+    z-index: 9999 !important;
+}
+[data-testid="stVirtualDropdown"] {
+    position: absolute !important;
+    left: 0 !important;
+    right: auto !important;
+    max-width: 280px !important;
+    overflow: hidden !important;
+}
+.stMultiSelect div[data-baseweb="select"] {
+    max-width: 100% !important;
+    direction: rtl !important;
+    width: 100% !important;
+    position: relative !important;
+    overflow: visible !important;
+}
+.stMultiSelect [data-baseweb="select"] [role="option"] {
+    word-wrap: break-word !important;
+    white-space: normal !important;
+}
+.stSelectbox div[data-baseweb="select"] {
+    width: 100% !important;
+    position: relative !important;
+}
+.stSelectbox [data-baseweb="popover"] {
+    position: absolute !important;
+    left: 0 !important;
+    right: auto !important;
+    max-width: 280px !important;
+    overflow: hidden !important;
+}
+
+/* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
+.stTextInput > div > div > input {
+    font-family: 'Arial', sans-serif !important;
+    border-radius: 30px !important; border: 2px solid #eaeaea !important;
+    padding: 15px 20px !important; font-size: 16px !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+    text-align: left !important;
+    direction: ltr !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+}
+
+/* כרטיסיות המוצרים - אנגלית, משמאל לימין LTR */
+div[data-testid="stVerticalBlock"] > div[style*="border"] {
+    border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    background-color: white; padding: 15px !important; position: relative;
+    direction: ltr !important; text-align: left !important;
+}
+div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {
+    transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+}
+
+.email-btn {
+    display: block; width: 100%; text-align: center; background-color: #27ae60;
+    color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
+    font-weight: bold; margin-top: 20px; transition: background-color 0.3s;
+    font-family: 'Arial', sans-serif !important;
+}
+.email-btn:hover { background-color: #219653; }
+
+/* פס גלילה נקי */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #999; }
+
+/* 4. הסרת גלישה אופקית (Horizontal Scroll) מה-body הראשי */
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+}
+.main, .block-container {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+}
+main {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+}
+/* וודא שכל זום יישמר בגבולות הדף */
+* {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 6. סל קניות דביק בתחתית הסיידבר */
+.sticky-cart {
+    position: sticky;
+    bottom: 0;
+    z-index: 100;
+    background: #f8fafc;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
+    padding-bottom: 18px;
+    margin-bottom: 0;
+    border-radius: 0 0 16px 16px;
+    transition: box-shadow 0.2s;
+}
+.sticky-cart .email-btn {
+    margin-bottom: 0;
+}
+</style>
 """, unsafe_allow_html=True)
 
 # --- 5. כותרת ---
