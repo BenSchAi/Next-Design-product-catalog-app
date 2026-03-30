@@ -36,80 +36,85 @@ CATEGORY_MAP = {
 # --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
-    /* משיכת פונט Heebo המודרני מגוגל */
-    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
-
-    /* החלת הפונט על רוב האלמנטים באופן בטוח מבלי לדרוס אייקונים */
-    html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label {
-        font-family: 'Heebo', sans-serif;
-    }
-
-    /* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
-    .material-icons, .stIcon, svg, i {
-        font-family: 'Material Icons' !important;
-    }
-
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
-    /* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח השבור */
+    /* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח הריק של סטרימליט */
     [data-testid="stSidebarHeader"] {
         display: none !important;
     }
     section[data-testid="stSidebar"] .block-container {
-        padding-top: 1.5rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 2rem !important;
     }
 
-    /* עיצוב כותרות סיידבר - פונט חובה, צבע כחול-נייבי עמוק, קו תכלת, יישור לימין */
-    section[data-testid="stSidebar"] h2 {
-        font-family: 'Heebo', sans-serif !important;
-        color: #1E3A8A !important; 
-        font-weight: 900 !important;
-        font-size: 1.6rem !important;
-        border-bottom: 3px solid #BFDBFE !important;
-        padding-bottom: 6px !important;
-        margin-bottom: 18px !important;
-        margin-top: 0 !important;
+    /* יישור גורף לימין (RTL) לסיידבר והתוכן */
+    .block-container, section[data-testid="stSidebar"] {
+        direction: rtl !important;
         text-align: right !important;
-        width: 100%;
-        display: block;
     }
 
-    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין */
-    section[data-testid="stSidebar"] label p {
-        font-family: 'Heebo', sans-serif !important;
-        color: #334155 !important;
-        font-weight: 700 !important;
-        font-size: 15px !important;
+    /* כותרות סיידבר - יישור לימין (ללא שינוי פונטים) */
+    section[data-testid="stSidebar"] h2 {
+        color: #000 !important;
+        font-weight: 900 !important;
+        font-size: 1.6rem !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 15px !important;
+        margin-top: 0 !important;
+        direction: rtl !important;
         text-align: right !important;
-        width: 100%;
+        display: block; width: 100%;
+    }
+
+    /* תוויות סיידבר (קטגוריה, מחיר וכו') - מודגשות ומיושרות לימין */
+    section[data-testid="stSidebar"] label p, .stMultiSelect label p, .stSlider label p, .stNumberInput label p {
+        color: #222 !important;
+        font-weight: 800 !important;
+        font-size: 15px !important;
+        direction: rtl !important;
+        text-align: right !important;
+        display: block; width: 100%;
     }
     
-    /* מניעת חריגה של תיבת הבחירה - ללא RTL ששובר את הסליידרים */
+    /* מניעת חריגה של תיבת הבחירה ויישור לימין */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
+        direction: rtl !important;
+    }
+
+    /* --- תיקון קריטי לסליידרים ---
+       הסליידר עצמו חייב להיות משמאל לימין כדי שהפס האדום לא יישבר! */
+    .stSlider, .stNumberInput {
+        direction: ltr !important;
     }
     
-    /* עיצוב שורת החיפוש המרכזית */
+    /* העלמת הפס האפור (גלילה אופקית) */
+    .block-container { overflow-x: hidden; }
+    section[data-testid="stSidebar"] { overflow-x: hidden !important; }
+    
+    /* שורת חיפוש ראשית באנגלית - מיושרת לשמאל */
     .stTextInput > div > div > input {
         border-radius: 30px !important; border: 2px solid #eaeaea !important;
         padding: 15px 20px !important; font-size: 16px !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
-        text-align: right !important;
+        direction: ltr !important;
+        text-align: left !important;
     }
     .stTextInput > div > div > input:focus {
         border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
 
-    /* כרטיסיות המוצרים - אנחנו מייצרים אותם ב-HTML אז כאן אפשר לשים RTL בשלמות */
+    /* כרטיסיות מוצרים מיושרות לימין */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         background-color: white; padding: 15px !important; position: relative;
-        direction: rtl !important; text-align: right !important;
+        direction: rtl !important;
+        text-align: right !important;
     }
     div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {
         transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
@@ -122,16 +127,10 @@ st.markdown("""
     }
     .email-btn:hover { background-color: #219653; }
     
-    /* פס גלילה נקי */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
-    
-    /* העלמת גלישת רוחב מעצבנת */
-    .block-container {
-        overflow-x: hidden;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -139,11 +138,11 @@ st.markdown("""
 st.markdown("""
     <div style="text-align: center; margin-bottom: 40px; margin-top: 10px; direction: rtl;">
         <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration: none;">
-            <h1 style="font-family: 'Heebo', sans-serif; font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
+            <h1 style="font-family: 'Arial', sans-serif; font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
                 <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
             </h1>
         </a>
-        <h3 style="font-family: 'Heebo', sans-serif; color: #666; font-weight: 500; margin-top: 5px;">קטלוג חכם לסוכנים 🔎</h3>
+        <h3 style="color: #666; font-weight: 400; margin-top: 5px; font-family: 'Arial', sans-serif;">קטלוג חכם לסוכנים 🔎</h3>
     </div>
 """, unsafe_allow_html=True)
 
