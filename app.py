@@ -368,6 +368,17 @@ def normalize_text(text):
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
 
 # --- 7. שירות גוגל וטעינת נתונים ---
+def get_gdrive_service():
+    try:
+        encoded_key = constants.GCP_SERVICE_ACCOUNT 
+        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
+        info = json.loads(decoded_key)
+        creds = service_account.Credentials.from_service_account_info(info)
+        return build('drive', 'v3', credentials=creds)
+    except Exception as e:
+        st.error(f"שגיאת חיבור: {e}")
+        return None
+
 @st.cache_data(ttl=3600)
 def get_image_base64(_service, file_id):
     try:
