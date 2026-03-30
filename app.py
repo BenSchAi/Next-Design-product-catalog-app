@@ -125,14 +125,34 @@ st.markdown("""
         text-align: left !important;
     }
     
-    /* 3. פתרון סופי לגלישת תפריטי Dropdown (Multiselect/Selectbox) */
+    /* 3. פתרון סופי וחזק לגלישת תפריטי Dropdown (Multiselect/Selectbox) */
+    /* הקובץ את ה-parent container בposition relative כדי שה-popover יידע למה להתיחס */
+    .stMultiSelect {
+        position: relative !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* הpopover עצמו - נועל את התפריט בתוך רוחב מוגבל והימים הנכון */
+    .stMultiSelect [data-baseweb="popover"] {
+        position: absolute !important;
+        left: 0 !important;
+        right: auto !important;
+        width: fit-content !important;
+        max-width: 280px !important;
+        overflow: hidden !important;
+        white-space: normal !important;
+        word-wrap: break-word !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* גם להנעת stVirtualDropdown */
     [data-testid="stVirtualDropdown"] {
-        right: 0 !important;
-        left: auto !important;
-        min-width: 300px !important;
-        max-width: 100vw !important;
-        text-align: right !important;
-        font-family: 'Arial', sans-serif !important;
+        position: absolute !important;
+        left: 0 !important;
+        right: auto !important;
+        max-width: 280px !important;
+        overflow: hidden !important;
     }
     
     /* מניעת חריגה של תיבת הבחירה ויישור לימין וגם התפריט הנפתח */
@@ -140,25 +160,42 @@ st.markdown("""
         max-width: 100% !important;
         direction: rtl !important;
         width: 100% !important;
-        position: relative;
+        position: relative !important;
+        overflow: visible !important;
     }
+    
+    /* הpopover של multiselect - פתרון חזק שמונע כל גלישה */
     .stMultiSelect [data-baseweb="popover"] {
         position: absolute !important;
-        right: 0 !important;
-        left: auto !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        left: 0 !important;
+        right: auto !important;
+        width: fit-content !important;
+        max-width: 280px !important;
+        min-width: 200px !important;
+        overflow: hidden !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        z-index: 9999 !important;
     }
-    .stMultiSelect [data-baseweb="select"] {
-        width: 100% !important;
+    
+    /* אפשרויות בתוך ה-dropdown */
+    .stMultiSelect [data-baseweb="select"] [role="option"] {
+        word-wrap: break-word !important;
+        white-space: normal !important;
     }
+    
     /* Selectbox dropdown ימני */
     .stSelectbox div[data-baseweb="select"] {
         width: 100% !important;
+        position: relative !important;
     }
+    
     .stSelectbox [data-baseweb="popover"] {
-        right: 0 !important;
-        left: auto !important;
+        position: absolute !important;
+        left: 0 !important;
+        right: auto !important;
+        max-width: 280px !important;
+        overflow: hidden !important;
     }
     
     /* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
@@ -203,12 +240,20 @@ st.markdown("""
     /* 4. הסרת גלישה אופקית (Horizontal Scroll) מה-body הראשי */
     html, body {
         overflow-x: hidden !important;
+        max-width: 100vw !important;
     }
     .main, .block-container {
         overflow-x: hidden !important;
+        max-width: 100% !important;
     }
     main {
         overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+    /* וודא שכל זום יישמר בגבולות הדף */
+    * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
     }
     </style>
 """, unsafe_allow_html=True)
