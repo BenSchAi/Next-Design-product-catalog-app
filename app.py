@@ -380,9 +380,11 @@ def get_gdrive_service():
         return None
 
 @st.cache_data(ttl=3600)
-def get_image_base64(_service, file_id):
+def get_image_base64(file_id):
+    service = get_gdrive_service()
+    if not service: return None
     try:
-        request = _service.files().get_media(fileId=file_id, supportsAllDrives=True)
+        request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
         fh = io.BytesIO()
         downloader = MediaIoBaseDownload(fh, request)
         done = False
@@ -562,7 +564,7 @@ if not df.empty and should_show_results:
                         if not img_id: img_id = list(valid_images.values())[i % len(valid_images)]
                     # --- טיפול ביצירת HTML ---
                     if img_id:
-                        img_b64 = get_image_base64(service, img_id)
+                        img_b64 = get_image_base64(img_id)
                         if img_b64:
                             img_html = f'<img src="data:image/jpeg;base64,{img_b64}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;">'
                         else:
