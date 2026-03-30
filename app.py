@@ -563,7 +563,7 @@ if not df.empty and should_show_results:
                     else:
                         if is_selected:
                             del st.session_state.selected_items[unique_item_id]
-                            st.rerun()
+                            # אין צורך ב-st.rerun כאן, Streamlit יעדכן את הסטייט אוטומטית
                     # --- טיפול ביצירת תמונה ---
                     img_id = None
                     base_name_clean = normalize_text(row['base_filename'])
