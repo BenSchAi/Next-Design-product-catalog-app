@@ -33,33 +33,23 @@ CATEGORY_MAP = {
     "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
 }
 
-# --- 4. עיצוב CSS מתוקן (RTL, פונט, העלמת גלילה) ---
+# --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
     /* משיכת פונט Heebo המודרני מגוגל */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
 
-    /* החלת הפונט על טקסטים בלי לדרוס אייקונים */
-    h1, h2, h3, h4, h5, p, label, .stMarkdown, .stText, input, span {
+    /* החלת הפונט על רוב האלמנטים באופן בטוח מבלי לדרוס אייקונים */
+    html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label {
         font-family: 'Heebo', sans-serif;
     }
 
-    /* שמירה על הפונט של האייקונים של סטרימליט כדי למנוע את הטקסט האפור המוזר */
-    .material-icons, .stIcon, i {
+    /* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
+    .material-icons, .stIcon, svg, i {
         font-family: 'Material Icons' !important;
     }
 
-    /* כיוון ימין-לשמאל (RTL) לכל האתר */
-    .block-container, section[data-testid="stSidebar"] {
-        direction: rtl !important;
-        text-align: right !important;
-    }
-
-    /* העלמת גלילה אופקית מיותרת (הפס האפור) */
-    section[data-testid="stSidebar"] {
-        overflow-x: hidden !important;
-    }
-
+    #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
@@ -72,8 +62,9 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
 
-    /* עיצוב כותרות סיידבר - צבע כחול-נייבי עמוק, פונט עבה וקו תכלת */
-    section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h2 {
+    /* עיצוב כותרות סיידבר - פונט חובה, צבע כחול-נייבי עמוק, קו תכלת, יישור לימין */
+    section[data-testid="stSidebar"] h2 {
+        font-family: 'Heebo', sans-serif !important;
         color: #1E3A8A !important; 
         font-weight: 900 !important;
         font-size: 1.6rem !important;
@@ -82,34 +73,37 @@ st.markdown("""
         margin-bottom: 18px !important;
         margin-top: 0 !important;
         text-align: right !important;
+        width: 100%;
+        display: block;
     }
 
-    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם */
+    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין */
     section[data-testid="stSidebar"] label p {
+        font-family: 'Heebo', sans-serif !important;
         color: #334155 !important;
         font-weight: 700 !important;
         font-size: 15px !important;
         text-align: right !important;
+        width: 100%;
     }
     
-    /* מניעת חריגה של תיבת הבחירה ויישור לימין */
+    /* מניעת חריגה של תיבת הבחירה - ללא RTL ששובר את הסליידרים */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
-        direction: rtl !important;
     }
     
+    /* עיצוב שורת החיפוש המרכזית */
     .stTextInput > div > div > input {
         border-radius: 30px !important; border: 2px solid #eaeaea !important;
         padding: 15px 20px !important; font-size: 16px !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
         text-align: right !important;
-        direction: rtl !important;
     }
     .stTextInput > div > div > input:focus {
         border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
 
-    /* כרטיסיות המוצרים - יישור לימין ועיצוב נקי */
+    /* כרטיסיות המוצרים - אנחנו מייצרים אותם ב-HTML אז כאן אפשר לשים RTL בשלמות */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
@@ -128,10 +122,16 @@ st.markdown("""
     }
     .email-btn:hover { background-color: #219653; }
     
+    /* פס גלילה נקי */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
+    
+    /* העלמת גלישת רוחב מעצבנת */
+    .block-container {
+        overflow-x: hidden;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -139,11 +139,11 @@ st.markdown("""
 st.markdown("""
     <div style="text-align: center; margin-bottom: 40px; margin-top: 10px; direction: rtl;">
         <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration: none;">
-            <h1 style="font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
+            <h1 style="font-family: 'Heebo', sans-serif; font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
                 <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
             </h1>
         </a>
-        <h3 style="color: #666; font-weight: 500; margin-top: 5px;">קטלוג חכם לסוכנים 🔎</h3>
+        <h3 style="font-family: 'Heebo', sans-serif; color: #666; font-weight: 500; margin-top: 5px;">קטלוג חכם לסוכנים 🔎</h3>
     </div>
 """, unsafe_allow_html=True)
 
