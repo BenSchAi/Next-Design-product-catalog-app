@@ -523,6 +523,11 @@ with st.sidebar:
         if st.button("🗑️ נקה רשימה", use_container_width=True):
             st.session_state.selected_items = {}
             # אין צורך ב-st.rerun כאן
+    st.divider()
+    if st.button("🗑️ Clear Cache", use_container_width=True):
+        st.cache_data.clear()
+        st.success("Cache cleared!")
+        st.rerun()
     # ריווח בתחתית הסיידבר למניעת חיתוך טקסט
     st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
 
