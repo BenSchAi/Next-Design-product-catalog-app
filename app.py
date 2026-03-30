@@ -33,25 +33,39 @@ CATEGORY_MAP = {
     "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
 }
 
-# --- 4. עיצוב CSS חזק יותר עם פונט Heebo ---
+# --- 4. עיצוב CSS מתוקן (RTL, פונט, העלמת גלילה) ---
 st.markdown("""
     <style>
     /* משיכת פונט Heebo המודרני מגוגל */
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;900&display=swap');
 
-    /* דריסה אגרסיבית של כל הפונטים באתר לפונט העדכני */
-    html, body, [class*="st-"], [class*="css"], p, h1, h2, h3, span, div, label {
-        font-family: 'Heebo', sans-serif !important;
+    /* החלת הפונט על טקסטים בלי לדרוס אייקונים */
+    h1, h2, h3, h4, h5, p, label, .stMarkdown, .stText, input, span {
+        font-family: 'Heebo', sans-serif;
+    }
+
+    /* שמירה על הפונט של האייקונים של סטרימליט כדי למנוע את הטקסט האפור המוזר */
+    .material-icons, .stIcon, i {
+        font-family: 'Material Icons' !important;
+    }
+
+    /* כיוון ימין-לשמאל (RTL) לכל האתר */
+    .block-container, section[data-testid="stSidebar"] {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+
+    /* העלמת גלילה אופקית מיותרת (הפס האפור) */
+    section[data-testid="stSidebar"] {
+        overflow-x: hidden !important;
     }
 
     footer {visibility: hidden;}
     header {background-color: transparent !important;}
     
-    /* העלאת כל התוכן של הסיידבר למעלה */
+    /* העלאת כל התוכן של הסיידבר למעלה והסתרת הרווח השבור */
     [data-testid="stSidebarHeader"] {
-        padding: 0 !important;
-        height: 0 !important;
-        min-height: 0 !important;
+        display: none !important;
     }
     section[data-testid="stSidebar"] .block-container {
         padding-top: 1.5rem !important;
@@ -67,6 +81,7 @@ st.markdown("""
         padding-bottom: 6px !important;
         margin-bottom: 18px !important;
         margin-top: 0 !important;
+        text-align: right !important;
     }
 
     /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם */
@@ -74,29 +89,33 @@ st.markdown("""
         color: #334155 !important;
         font-weight: 700 !important;
         font-size: 15px !important;
+        text-align: right !important;
     }
     
-    /* מניעת חריגה של תיבת הבחירה */
+    /* מניעת חריגה של תיבת הבחירה ויישור לימין */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
+        direction: rtl !important;
     }
-    
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1200px; }
     
     .stTextInput > div > div > input {
         border-radius: 30px !important; border: 2px solid #eaeaea !important;
         padding: 15px 20px !important; font-size: 16px !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
+        text-align: right !important;
+        direction: rtl !important;
     }
     .stTextInput > div > div > input:focus {
         border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
 
+    /* כרטיסיות המוצרים - יישור לימין ועיצוב נקי */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         background-color: white; padding: 15px !important; position: relative;
+        direction: rtl !important; text-align: right !important;
     }
     div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {
         transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
@@ -109,7 +128,7 @@ st.markdown("""
     }
     .email-btn:hover { background-color: #219653; }
     
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
@@ -118,7 +137,7 @@ st.markdown("""
 
 # --- 5. כותרת ---
 st.markdown("""
-    <div style="text-align: center; margin-bottom: 40px; margin-top: 10px;">
+    <div style="text-align: center; margin-bottom: 40px; margin-top: 10px; direction: rtl;">
         <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration: none;">
             <h1 style="font-weight: 900; letter-spacing: 1px; color: #000; font-size: 46px; margin-bottom: 0;">
                 <span style="background-color: #000; color: #fff; padding: 0 12px; border-radius: 6px; margin-right: 5px;">NEXT</span>DESIGN
@@ -438,7 +457,7 @@ if not df.empty and should_show_results:
                         img_html = '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
                     
                     # --- הטיפול המלא והנכון בתגיות, גלישה, וצבעים ---
-                    tags_html = "<div style='display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px;'>"
+                    tags_html = "<div style='display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; direction: rtl;'>"
                     
                     # הצגת MOQ (זהב או אדום)
                     moq_val = format_moq_display(row['moq'])
@@ -473,10 +492,10 @@ if not df.empty and should_show_results:
                         elif any(x in d_up for x in ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']): general_info.append(detail)
                         else: other_info.append(detail)
                     
-                    html_content = '<div style="display: flex; flex-direction: column; height: 680px;">'
+                    html_content = '<div style="display: flex; flex-direction: column; height: 680px; direction: rtl; text-align: right;">'
                     html_content += f'<div style="height: 220px; display: flex; justify-content: center; align-items: center; margin-bottom: 10px; background-color: #fff; flex-shrink: 0; border-radius: 8px;">{img_html}</div>'
-                    html_content += f'<div style="min-height: 40px; text-align: left; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
-                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: left; line-height: 1.5; padding-right: 5px;">'
+                    html_content += f'<div style="min-height: 40px; text-align: right; margin-bottom: 5px; flex-shrink: 0;">{tags_html}</div>'
+                    html_content += '<div style="flex-grow: 1; overflow-y: auto; text-align: right; line-height: 1.5; padding-right: 5px;">'
                     
                     for info in general_info: html_content += f"<div style='font-weight: 800; font-size: 14px; color: #222; margin-bottom: 5px;'>{info}</div>"
                     for info in sample_info: html_content += f"<div style='font-size: 13px; color: #d35400; font-weight: 700; margin-bottom: 3px;'>⏱️ {info}</div>"
@@ -485,7 +504,7 @@ if not df.empty and should_show_results:
                     for info in other_info: html_content += f"<div style='font-size: 12px; color: #888;'>• {info}</div>"
                     
                     html_content += '</div>'
-                    html_content += '<div style="flex-shrink: 0; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; text-align: left;">'
+                    html_content += '<div style="flex-shrink: 0; margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px; text-align: right;">'
                     for info in price_info: html_content += f"<div style='color: #27ae60; font-weight: 900; font-size: 15px; margin-bottom: 3px; line-height: 1.2;'>💰 {info}</div>"
                     html_content += f"<div style='font-size: 10px; color: #aaa; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'>📂 {row['file_source']}</div>"
                     html_content += '</div></div>'
