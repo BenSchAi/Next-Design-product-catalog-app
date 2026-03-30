@@ -368,17 +368,6 @@ def normalize_text(text):
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
 
 # --- 7. שירות גוגל וטעינת נתונים ---
-def get_gdrive_service():
-    try:
-        encoded_key = constants.GCP_SERVICE_ACCOUNT 
-        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
-        info = json.loads(decoded_key)
-        creds = service_account.Credentials.from_service_account_info(info)
-        return build('drive', 'v3', credentials=creds)
-    except Exception as e:
-        st.error(f"שגיאת חיבור: {e}")
-        return None
-
 @st.cache_data(ttl=3600)
 def get_image_base64(_service, file_id):
     try:
@@ -466,7 +455,12 @@ def load_all_data():
     img_map = {f['name']: f['id'] for f in img_results.get('files', [])}
     return pd.DataFrame(all_products), img_map
 
-df, img_map = load_all_data()
+# --- טעינת הדאטה פעם אחת בלבד ---
+if 'df' not in st.session_state or 'img_map' not in st.session_state:
+    st.session_state.df, st.session_state.img_map = load_all_data()
+
+df = st.session_state.df
+img_map = st.session_state.img_map
 
 # --- 8. תפריט צד ---
 with st.sidebar:
@@ -495,7 +489,6 @@ with st.sidebar:
         for item_id, item_data in st.session_state.selected_items.items():
             email_body += f"--- {item_data['item_key']} ---\n"
             for detail in item_data['display_list']:
-                # העלמת ה-MOQ המקורי מרשימת המייל כדי למנוע כפילויות
                 if "Unnamed" not in detail and not contains_chinese(detail) and "MOQ" not in detail.upper(): 
                     email_body += f"• {detail}\n"
             email_body += f"מקור: {item_data['file_source']}\n\n"
@@ -505,15 +498,12 @@ with st.sidebar:
         st.markdown(f'<a href="mailto:?subject={encoded_subject}&body={encoded_body}" class="email-btn" target="_blank">✉️ שלח במייל עכשיו</a>', unsafe_allow_html=True)
         if st.button("🗑️ נקה רשימה", use_container_width=True):
             st.session_state.selected_items = {}
-            st.rerun()
-
+            # אין צורך ב-st.rerun כאן
     # ריווח בתחתית הסיידבר למניעת חיתוך טקסט
     st.markdown("<div style='height: 80px;'></div>", unsafe_allow_html=True)
 
 # --- 9. חיפוש ותצוגה ---
 search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
-
-# הלוגיקה החדשה והמלאה ללא חיתוכים
 should_show_results = bool(search_input.strip()) or bool(selected_categories) or bool(selected_materials) or bool(selected_capacities)
 
 if not df.empty and should_show_results:
@@ -543,16 +533,14 @@ if not df.empty and should_show_results:
             with cols[i % 4]:
                 with st.container(border=True):
                     is_selected = unique_item_id in st.session_state.selected_items
-                    
+                    # ייעול: אין st.rerun, רק עדכון state
                     if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
                         if not is_selected:
                             st.session_state.selected_items[unique_item_id] = row
-                            st.rerun()
                     else:
                         if is_selected:
                             del st.session_state.selected_items[unique_item_id]
-                            st.rerun()
-                    
+                    # --- טיפול ביצירת תמונה ---
                     img_id = None
                     base_name_clean = normalize_text(row['base_filename'])
                     valid_images = {name: i_id for name, i_id in img_map.items() if base_name_clean in normalize_text(name)}
@@ -561,7 +549,7 @@ if not df.empty and should_show_results:
                         for name, i_id in valid_images.items():
                             if row_target in normalize_text(name): img_id = i_id; break
                         if not img_id: img_id = list(valid_images.values())[i % len(valid_images)]
-                    
+                    # --- טיפול ביצירת HTML ---
                     if img_id:
                         img_b64 = get_image_base64(service, img_id)
                         if img_b64:
@@ -571,7 +559,7 @@ if not df.empty and should_show_results:
                     else:
                         img_html = '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
                     
-                    # --- הטיפול המלא והנכון בתגיות, גלישה, וצבעים ---
+                    # --- טיפול מלא בתגיות, גלישה, וצבעים ---
                     tags_html = "<div style='display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 5px; direction: ltr;'>"
                     
                     # הצגת MOQ (זהב או אדום)
