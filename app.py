@@ -320,10 +320,11 @@ def extract_categories(details_list):
                 found_categories.add(cat)
                 # אל תעשה break - אפשר לשייך ליותר מקטגוריה אחת
 
-    # חיישן חכם: כל מוצר שמכיל bottle, flask, tumbler, drinkware, thermos, cooler יקבל גם את 'בקבוקים, כוסות ושתייה' וגם 'עונות (קיץ/חורף)'
+    # חיישן חכם: כל מוצר שמכיל bottle, flask, tumbler, drinkware, thermos, cooler יקבל גם את 'בקבוקים, כוסות ושתייה', 'עונות (קיץ/חורף)' וגם 'מחנאות, נופש וספורט'
     if re.search(r'\b(bottle|flask|tumbler|drinkware|thermos|cooler)\b', text_to_scan):
         found_categories.add('בקבוקים, כוסות ושתייה')
         found_categories.add('עונות (קיץ/חורף)')
+        found_categories.add('מחנאות, נופש וספורט')
     # כדורגל, כדורסל, טניס וכו' יקבלו ספורט
     if re.search(r'\b(soccer|football|כדורגל|basketball|tennis|כדורסל|טניס|volleyball|כדורעף|ping pong|table tennis|פינג פונג)\b', text_to_scan):
         found_categories.add('מחנאות, נופש וספורט')
@@ -557,11 +558,12 @@ if not df.empty and should_show_results:
                     is_selected = unique_item_id in st.session_state.selected_items
                     if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
                         if not is_selected:
-                            st.session_state.selected_items[unique_item_id] = row
+                            # שמור dict ולא Series כדי למנוע באגים של קאשינג/סידור
+                            st.session_state.selected_items[unique_item_id] = row.to_dict()
                     else:
                         if is_selected:
                             del st.session_state.selected_items[unique_item_id]
-                            st.experimental_rerun()
+                            st.rerun()
                     # --- טיפול ביצירת תמונה ---
                     img_id = None
                     base_name_clean = normalize_text(row['base_filename'])
