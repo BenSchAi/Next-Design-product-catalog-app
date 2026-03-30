@@ -36,12 +36,12 @@ CATEGORY_MAP = {
 # --- 4. עיצוב CSS ---
 st.markdown("""
     <style>
-    /* הגדרת פונט אריאל בלבד על הכל */
+    /* החלת פונט אריאל נקי על כל האלמנטים */
     html, body, [class*="st-"], p, h1, h2, h3, h4, h5, h6, span, div, label {
         font-family: 'Arial', sans-serif !important;
     }
 
-    /* אי הריסת האייקונים של סטרימליט */
+    /* שמירה על הפונטים של סטרימליט עבור אייקונים כדי שלא ישתבשו */
     .material-icons, .stIcon, svg, i {
         font-family: 'Material Icons' !important;
     }
@@ -59,8 +59,12 @@ st.markdown("""
         padding-bottom: 2rem !important;
     }
 
-    /* עיצוב כותרות סיידבר - צבע כחול-נייבי עמוק, קו תכלת, יישור לימין RTL */
-    section[data-testid="stSidebar"] h2 {
+    /* עיצוב כותרות סיידבר - אריאל מפורש, צבע כחול-נייבי עמוק, יישור לימין */
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] .stMarkdown h2 {
+        font-family: 'Arial', sans-serif !important;
         color: #1E3A8A !important; 
         font-weight: 900 !important;
         font-size: 1.6rem !important;
@@ -74,30 +78,26 @@ st.markdown("""
         display: block;
     }
 
-    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין RTL */
+    /* הדגשת תוויות הסינון (קטגוריה, מחיר) - אפור פחם, יישור לימין */
     section[data-testid="stSidebar"] label p {
+        font-family: 'Arial', sans-serif !important;
         color: #334155 !important;
         font-weight: 700 !important;
         font-size: 15px !important;
         text-align: right !important;
         direction: rtl !important;
         width: 100%;
-        display: block;
     }
     
-    /* מניעת חריגה של תיבת הבחירה ויישור לימין RTL */
+    /* מניעת חריגה של תיבת הבחירה ויישור לימין */
     .stMultiSelect div[data-baseweb="select"] {
         max-width: 100% !important;
         direction: rtl !important;
     }
-
-    /* שמירת הסליידרים משמאל לימין כדי למנוע את באג הפס האדום */
-    .stSlider, .stNumberInput {
-        direction: ltr !important;
-    }
     
-    /* עיצוב שורת החיפוש המרכזית - אנגלית (LTR) שמאל */
+    /* עיצוב שורת החיפוש המרכזית (מיושרת לשמאל לאנגלית) */
     .stTextInput > div > div > input {
+        font-family: 'Arial', sans-serif !important;
         border-radius: 30px !important; border: 2px solid #eaeaea !important;
         padding: 15px 20px !important; font-size: 16px !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
@@ -108,7 +108,7 @@ st.markdown("""
         border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
 
-    /* כרטיסיות המוצרים - אנגלית (LTR) יישור שמאלה */
+    /* כרטיסיות המוצרים - אנגלית, משמאל לימין LTR */
     div[data-testid="stVerticalBlock"] > div[style*="border"] {
         border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
@@ -133,9 +133,10 @@ st.markdown("""
     ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
     ::-webkit-scrollbar-thumb:hover { background: #999; }
     
-    /* העלמת גלישת רוחב מעצבנת (הפס האפור למטה) */
-    .block-container { overflow-x: hidden; }
-    section[data-testid="stSidebar"] { overflow-x: hidden !important; }
+    /* העלמת גלישת רוחב מעצבנת */
+    .block-container {
+        overflow-x: hidden;
+    }
     </style>
 """, unsafe_allow_html=True)
 
