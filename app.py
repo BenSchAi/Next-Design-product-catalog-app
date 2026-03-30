@@ -482,8 +482,11 @@ def load_all_data():
 if 'df' not in st.session_state or 'img_map' not in st.session_state:
     st.session_state.df, st.session_state.img_map = load_all_data()
 
-df = st.session_state.df
-img_map = st.session_state.img_map
+
+# --- 8. תפריט צד ---
+with st.sidebar:
+    df = st.session_state.df
+    img_map = st.session_state.img_map
 
 # --- 8. תפריט צד ---
 with st.sidebar:
