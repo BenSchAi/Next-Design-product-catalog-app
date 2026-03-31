@@ -20,13 +20,14 @@ FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 
 # --- Pagination ---
 PRODUCTS_PER_PAGE = 12
-COLUMNS_PER_ROW = 4
+COLUMNS_PER_ROW   = 4
 
 # --- Color palette ---
 COLOR_PRIMARY        = "#1E3A8A"   # כחול נייבי (כותרות סיידבר)
 COLOR_SIDEBAR_BORDER = "#BFDBFE"   # תכלת בהיר (קו תחתון כותרות)
 COLOR_TEXT_DARK      = "#334155"   # אפור-פחם (תוויות סינון)
-COLOR_PRICE          = "#27ae60"   # ירוק (מחיר)
+COLOR_PRICE          = "#27ae60"   # ירוק (מחיר USD)
+COLOR_PRICE_ILS      = "#7C3AED"   # סגול עמוק (מחיר ILS) — בולט ושונה מהדולר
 COLOR_DELIVERY       = "#444"      # אפור כהה (משלוח)
 COLOR_PACKING        = "#666"      # אפור בינוני (אריזה)
 COLOR_OTHER          = "#888"      # אפור בהיר (שאר)
@@ -44,8 +45,11 @@ COLOR_SUCCESS        = "#219653"   # ירוק כהה (hover כפתור מייל)
 FONT_MAIN = "'Arial', sans-serif"
 
 # --- Card dimensions ---
-CARD_HEIGHT       = "680px"
-CARD_IMAGE_HEIGHT = "220px"
+CARD_HEIGHT       = "720px"   # הוגדל מעט כדי לאכלס את שורת השקלים
+CARD_IMAGE_HEIGHT = "200px"
+
+# --- Currency defaults ---
+DEFAULT_USD_ILS = 3.65
 
 # --- Category keyword map ---
 CATEGORY_MAP = {
@@ -61,13 +65,13 @@ CATEGORY_MAP = {
 }
 
 # --- Keyword sets for parsing ---
-PACKING_KEYWORDS   = ['OPP BAG', 'POLY BAG', 'PE BAG', 'PACKING', 'MEAS', 'CTN', 'G.W', 'N.W', 'BOX']
-PRICE_KEYWORDS     = ['USD', 'PRICE']
-PACKING_KEYS       = ['PACKING', 'OPP', 'BOX', 'CTN', 'MEAS', 'G.W', 'N.W', 'KGS']
-DELIVERY_KEYS      = ['DELIVERY', 'DAYS', 'LEAD TIME', 'VALIDITY']
-GENERAL_KEYS       = ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']
-SKIP_CONTENT_KEYS  = ['WEB', 'HTTP', 'HTTPS', 'EXCHANGE RATE', 'FOB', 'PICTURE', 'PRODUCT DETAILS']
-ITEM_TRIGGER_KEYS  = ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'DESCRIPTION :']
+PACKING_KEYWORDS  = ['OPP BAG', 'POLY BAG', 'PE BAG', 'PACKING', 'MEAS', 'CTN', 'G.W', 'N.W', 'BOX']
+PRICE_KEYWORDS    = ['USD', 'PRICE']
+PACKING_KEYS      = ['PACKING', 'OPP', 'BOX', 'CTN', 'MEAS', 'G.W', 'N.W', 'KGS']
+DELIVERY_KEYS     = ['DELIVERY', 'DAYS', 'LEAD TIME', 'VALIDITY']
+GENERAL_KEYS      = ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']
+SKIP_CONTENT_KEYS = ['WEB', 'HTTP', 'HTTPS', 'EXCHANGE RATE', 'FOB', 'PICTURE', 'PRODUCT DETAILS']
+ITEM_TRIGGER_KEYS = ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'DESCRIPTION :']
 
 
 # =============================================================================
@@ -82,6 +86,9 @@ if 'current_page' not in st.session_state:
     st.session_state.current_page = 0
 if 'last_filters' not in st.session_state:
     st.session_state.last_filters = None
+# zoom dialog state: holds (img_b64, title) or None
+if 'zoom_image' not in st.session_state:
+    st.session_state.zoom_image = None
 
 
 # =============================================================================
@@ -237,6 +244,13 @@ div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
     font-family: {FONT_MAIN} !important;
 }}
 .email-btn:hover {{ background-color: {COLOR_SUCCESS}; }}
+/* כפתור זום תמונה */
+.zoom-btn {{
+    display: block; width: 100%; text-align: center; background: none;
+    border: 1px dashed #ccc; border-radius: 6px; padding: 2px 0;
+    cursor: pointer; font-size: 11px; color: #999; margin-top: 4px;
+}}
+.zoom-btn:hover {{ border-color: #7C3AED; color: #7C3AED; }}
 ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
 ::-webkit-scrollbar-track {{ background: #f1f1f1; border-radius: 10px; }}
 ::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
@@ -319,6 +333,17 @@ def extract_moq(details_list):
                 if match.group(2) == 'K':
                     val *= 1000
                 return val
+    return None
+
+
+def extract_sourcer(details_list):
+    """Extract sourcer/buyer name from lines containing SOURCER keyword."""
+    for detail in details_list:
+        if 'SOURCER' in detail.upper():
+            # Support formats: "SOURCER: NANA", "SOURCER NANA", "SOURCER:NANA"
+            match = re.search(r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]+)', detail, re.IGNORECASE)
+            if match:
+                return match.group(1).strip().upper()
     return None
 
 
@@ -436,6 +461,28 @@ def classify_details(display_list):
     return general_info, price_info, packing_info, delivery_info, sample_info, other_info
 
 
+def compute_ils_prices(price_info_lines, usd_ils_rate):
+    """
+    From a list of price strings, extract all USD values and return
+    a list of formatted ILS strings (one per detected price).
+    Returns empty list if rate is 0 or no prices found.
+    """
+    if not usd_ils_rate or usd_ils_rate <= 0:
+        return []
+    ils_lines = []
+    for line in price_info_lines:
+        values = re.findall(r'\d*\.\d+|\d+', line)
+        for v in values:
+            try:
+                usd = float(v)
+                if 0 < usd < 10000:   # סינון ערכים סבירים
+                    ils = usd * usd_ils_rate
+                    ils_lines.append(f"₪ {ils:.2f}")
+            except:
+                pass
+    return ils_lines
+
+
 # =============================================================================
 # GOOGLE DRIVE SERVICE & DATA LOADING
 # =============================================================================
@@ -502,7 +549,7 @@ def load_all_data():
 
                 row_str = " ".join(df_file.iloc[idx].dropna().astype(str))
                 if any(k in row_str.upper() for k in ITEM_TRIGGER_KEYS):
-                    details = []
+                    details  = []
                     item_key = ""
                     for offset in range(25):
                         curr_idx = idx + offset
@@ -511,7 +558,7 @@ def load_all_data():
                             break
 
                         b_row = df_file.iloc[curr_idx].dropna().astype(str)
-                        line = re.sub(r'\s+', ' ', " ".join(b_row)).strip()
+                        line  = re.sub(r'\s+', ' ', " ".join(b_row)).strip()
 
                         if offset > 1 and any(k in line.upper() for k in ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM']):
                             skip_until = curr_idx
@@ -527,19 +574,20 @@ def load_all_data():
                     if details:
                         full_text_str = " ".join(details)
                         all_products.append({
-                            'item_key': item_key if item_key else details[0],
-                            'display_list': details,
-                            'full_text': full_text_str,
+                            'item_key':        item_key if item_key else details[0],
+                            'display_list':    details,
+                            'full_text':       full_text_str,
                             'normalized_text': normalize_text(full_text_str),
-                            'file_source': item['name'],
-                            'base_filename': item['name'].rsplit('.', 1)[0],
-                            'row_index': idx,
-                            'min_price': extract_min_price(details),
-                            'moq': extract_moq(details),
-                            'delivery_days': extract_delivery_days(details),
-                            'capacity': extract_capacity(full_text_str),
-                            'materials': extract_materials(full_text_str),
-                            'categories': extract_categories(details)
+                            'file_source':     item['name'],
+                            'base_filename':   item['name'].rsplit('.', 1)[0],
+                            'row_index':       idx,
+                            'min_price':       extract_min_price(details),
+                            'moq':             extract_moq(details),
+                            'delivery_days':   extract_delivery_days(details),
+                            'capacity':        extract_capacity(full_text_str),
+                            'materials':       extract_materials(full_text_str),
+                            'categories':      extract_categories(details),
+                            'sourcer':         extract_sourcer(details),        # ← חדש
                         })
         except:
             continue
@@ -573,18 +621,6 @@ def _resolve_image_id(row, i, img_map):
     return list(valid_images.values())[i % len(valid_images)]
 
 
-def _build_image_html(img_id):
-    """Return an <img> tag or a placeholder div."""
-    if img_id:
-        img_b64 = get_image_base64(img_id)
-        if img_b64:
-            return (
-                f'<img src="data:image/jpeg;base64,{img_b64}" '
-                f'style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 4px;">'
-            )
-    return '<div style="color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</div>'
-
-
 def _build_tags_html(row):
     """Build the colored tag strip (MOQ, capacity, categories)."""
     moq_val = format_moq_display(row['moq'])
@@ -606,6 +642,14 @@ def _build_tags_html(row):
             f"border-radius:4px; font-size:11px; white-space:nowrap;'>💧 {row['capacity']}</span>"
         )
 
+    # תגית איש רכש
+    sourcer_tag = ""
+    if row.get('sourcer'):
+        sourcer_tag = (
+            f"<span style='background:#e0e7ff; color:#3730a3; padding:3px 8px; "
+            f"border-radius:4px; font-size:11px; white-space:nowrap;'>👤 {row['sourcer']}</span>"
+        )
+
     category_tags = "".join(
         f"<span style='background:{COLOR_TAG_BG}; color:#fff; padding:3px 8px; "
         f"border-radius:4px; font-size:11px; white-space:nowrap;'>🏷️ {cat}</span>"
@@ -614,16 +658,25 @@ def _build_tags_html(row):
 
     return (
         f"<div style='display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; direction:ltr;'>"
-        f"{moq_tag}{capacity_tag}{category_tags}</div>"
+        f"{moq_tag}{capacity_tag}{sourcer_tag}{category_tags}</div>"
     )
 
 
-def render_product_card(row, i, img_map):
+# --- Image zoom dialog ---
+@st.dialog("🔍 תצוגה מוגדלת")
+def _show_zoom_dialog(img_b64, title):
+    """Dialog that shows a full-size zoomable image via st.image."""
+    st.caption(title)
+    img_bytes = base64.b64decode(img_b64)
+    st.image(img_bytes, use_container_width=True)
+
+
+def render_product_card(row, i, img_map, usd_ils_rate):
     """Render a single product card inside a Streamlit container."""
     unique_item_id = f"{row['base_filename']}_{row['row_index']}"
 
     with st.container(border=True):
-        # Checkbox
+        # --- Checkbox ---
         is_selected = unique_item_id in st.session_state.selected_items
         if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
             if not is_selected:
@@ -634,43 +687,80 @@ def render_product_card(row, i, img_map):
                 del st.session_state.selected_items[unique_item_id]
                 st.rerun()
 
-        img_html = _build_image_html(_resolve_image_id(row, i, img_map))
+        # --- Image ---
+        img_id  = _resolve_image_id(row, i, img_map)
+        img_b64 = get_image_base64(img_id) if img_id else None
+
+        if img_b64:
+            img_bytes = base64.b64decode(img_b64)
+            st.image(img_bytes, use_container_width=True)
+            # כפתור זום קטן מתחת לתמונה
+            if st.button("🔍 הגדל תמונה", key=f"zoom_{unique_item_id}", use_container_width=True):
+                _show_zoom_dialog(img_b64, row['item_key'])
+        else:
+            st.markdown(
+                f'<div style="height:{CARD_IMAGE_HEIGHT}; display:flex; justify-content:center; '
+                f'align-items:center; background:#f9f9f9; border-radius:8px; color:#aaa; font-size:12px;">'
+                f'📷 לא נמצאה תמונה</div>',
+                unsafe_allow_html=True
+            )
+
+        # --- Tags ---
         tags_html = _build_tags_html(row)
+        st.markdown(tags_html, unsafe_allow_html=True)
+
+        # --- Details ---
         general_info, price_info, packing_info, delivery_info, sample_info, other_info = classify_details(row['display_list'])
 
-        html_content = (
-            f'<div style="display:flex; flex-direction:column; height:{CARD_HEIGHT}; direction:ltr; text-align:left;">'
-            f'<div style="height:{CARD_IMAGE_HEIGHT}; display:flex; justify-content:center; align-items:center; '
-            f'margin-bottom:10px; background-color:#fff; flex-shrink:0; border-radius:8px;">{img_html}</div>'
-            f'<div style="min-height:40px; text-align:left; margin-bottom:5px; flex-shrink:0;">{tags_html}</div>'
-            f'<div style="flex-grow:1; overflow-y:auto; text-align:left; line-height:1.5; padding-right:5px;">'
-        )
+        details_html = '<div style="flex-grow:1; overflow-y:auto; text-align:left; line-height:1.5; padding-right:5px; direction:ltr;">'
 
         for info in general_info:
-            html_content += f"<div style='font-weight:800; font-size:14px; color:{COLOR_GENERAL}; margin-bottom:5px;'>{info}</div>"
+            details_html += f"<div style='font-weight:800; font-size:14px; color:{COLOR_GENERAL}; margin-bottom:5px;'>{info}</div>"
         for info in sample_info:
-            html_content += f"<div style='font-size:13px; color:{COLOR_SAMPLE}; font-weight:700; margin-bottom:3px;'>⏱️ {info}</div>"
+            details_html += f"<div style='font-size:13px; color:{COLOR_SAMPLE}; font-weight:700; margin-bottom:3px;'>⏱️ {info}</div>"
         for info in delivery_info:
-            html_content += f"<div style='font-size:13px; color:{COLOR_DELIVERY}; font-weight:600; margin-bottom:2px;'>🚚 {info}</div>"
+            details_html += f"<div style='font-size:13px; color:{COLOR_DELIVERY}; font-weight:600; margin-bottom:2px;'>🚚 {info}</div>"
         for info in packing_info:
-            html_content += f"<div style='font-size:13px; color:{COLOR_PACKING}; margin-bottom:2px;'>📦 {info}</div>"
+            details_html += f"<div style='font-size:13px; color:{COLOR_PACKING}; margin-bottom:2px;'>📦 {info}</div>"
         for info in other_info:
-            html_content += f"<div style='font-size:12px; color:{COLOR_OTHER};'>• {info}</div>"
+            details_html += f"<div style='font-size:12px; color:{COLOR_OTHER};'>• {info}</div>"
 
-        html_content += (
-            '</div>'
-            f'<div style="flex-shrink:0; margin-top:10px; border-top:1px solid #eee; padding-top:10px; text-align:left;">'
+        details_html += '</div>'
+
+        # --- Price footer ---
+        price_footer = (
+            f'<div style="flex-shrink:0; margin-top:8px; border-top:1px solid #eee; '
+            f'padding-top:8px; text-align:left; direction:ltr;">'
         )
+
+        # מחיר USD
         for info in price_info:
-            html_content += f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:15px; margin-bottom:3px; line-height:1.2;'>💰 {info}</div>"
-        html_content += (
-            f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:5px; white-space:nowrap; "
+            price_footer += (
+                f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:15px; "
+                f"margin-bottom:2px; line-height:1.2;'>💰 {info}</div>"
+            )
+
+        # מחיר ILS — מחושב ומוצג בסגול
+        ils_values = compute_ils_prices(price_info, usd_ils_rate)
+        if ils_values:
+            ils_joined = "  |  ".join(ils_values)
+            price_footer += (
+                f"<div style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px; "
+                f"margin-bottom:4px; line-height:1.3;'>🪙 {ils_joined}</div>"
+            )
+
+        price_footer += (
+            f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:4px; white-space:nowrap; "
             f"overflow:hidden; text-overflow:ellipsis;'>📂 {row['file_source']}</div>"
-            '</div></div>'
+            '</div>'
         )
 
-        st.markdown(html_content, unsafe_allow_html=True)
+        st.markdown(details_html + price_footer, unsafe_allow_html=True)
 
+
+# =============================================================================
+# SIDEBAR
+# =============================================================================
 
 def _render_cart_section():
     """Render the selected-items cart inside the sidebar."""
@@ -692,7 +782,7 @@ def _render_cart_section():
     email_body += "בברכה,\nNext Design"
 
     encoded_subject = urllib.parse.quote("Next Design - פרטי מוצרים")
-    encoded_body = urllib.parse.quote(email_body)
+    encoded_body    = urllib.parse.quote(email_body)
     st.markdown(
         f'<a href="mailto:?subject={encoded_subject}&body={encoded_body}" class="email-btn" target="_blank">'
         f'✉️ שלח במייל עכשיו</a>',
@@ -704,29 +794,64 @@ def _render_cart_section():
 
 
 def render_sidebar(df):
-    """Render the full sidebar (filters, cart, refresh). Returns active filter values."""
+    """
+    Render the full sidebar (filters, currency, cart, refresh).
+    Returns a dict of active filter values + usd_ils_rate.
+    """
     with st.sidebar:
         st.header("⚙️ סינון חכם")
 
+        # --- קטגוריות ---
         selected_categories = st.multiselect(
             "קטגוריה (Category)", list(CATEGORY_MAP.keys()), placeholder="בחר קטגוריות..."
         )
+
+        # --- מחיר ---
         price_min, price_max = st.slider(
             "טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0, value=(0.0, 200.0), step=0.1
         )
+
+        # --- שער דולר ---
+        usd_ils_rate = st.number_input(
+            "שער דולר (USD/ILS ₪)",
+            min_value=0.0,
+            value=DEFAULT_USD_ILS,
+            step=0.01,
+            format="%.2f",
+            help="המחיר בשקלים בכרטיסיות יחושב לפי שער זה"
+        )
+
+        # --- MOQ ---
         max_moq = st.number_input(
             "MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500
         )
+
+        # --- זמן אספקה ---
         max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
 
+        # --- חומר ונפח ---
         available_capacities = sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
-        selected_materials = st.multiselect(
+        selected_materials   = st.multiselect(
             "חומר (Material)",
             ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"],
             placeholder="בחר חומרים..."
         )
-        selected_capacities = st.multiselect(
+        selected_capacities  = st.multiselect(
             "נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)..."
+        )
+
+        # --- ספקים (קבצי מקור) ---
+        available_sources = sorted(df['file_source'].dropna().unique().tolist()) if not df.empty else []
+        selected_sources  = st.multiselect(
+            "ספק / קובץ מקור", available_sources, placeholder="בחר ספקים..."
+        )
+
+        # --- אנשי רכש (sourcers) ---
+        available_sourcers = sorted([
+            s for s in df['sourcer'].dropna().unique().tolist() if s
+        ]) if not df.empty else []
+        selected_sourcers  = st.multiselect(
+            "איש רכש (Sourcer)", available_sourcers, placeholder="בחר איש רכש..."
         )
 
         st.divider()
@@ -740,8 +865,23 @@ def render_sidebar(df):
 
         st.markdown("<div style='height:80px;'></div>", unsafe_allow_html=True)
 
-    return selected_categories, price_min, price_max, max_moq, max_delivery, selected_materials, selected_capacities
+    return dict(
+        selected_categories=selected_categories,
+        price_min=price_min,
+        price_max=price_max,
+        usd_ils_rate=usd_ils_rate,
+        max_moq=max_moq,
+        max_delivery=max_delivery,
+        selected_materials=selected_materials,
+        selected_capacities=selected_capacities,
+        selected_sources=selected_sources,
+        selected_sourcers=selected_sourcers,
+    )
 
+
+# =============================================================================
+# PAGE HEADER
+# =============================================================================
 
 def render_page_header():
     """Render the top branding header."""
@@ -757,10 +897,14 @@ def render_page_header():
     """, unsafe_allow_html=True)
 
 
+# =============================================================================
+# PAGINATION
+# =============================================================================
+
 def render_pagination(total_products):
     """Render prev/next pagination controls and update session state."""
     st.markdown("<br>", unsafe_allow_html=True)
-    total_pages = (total_products + PRODUCTS_PER_PAGE - 1) // PRODUCTS_PER_PAGE
+    total_pages  = (total_products + PRODUCTS_PER_PAGE - 1) // PRODUCTS_PER_PAGE
     col_prev, col_info, col_next = st.columns([1, 2, 1])
 
     with col_prev:
@@ -787,48 +931,55 @@ def render_pagination(total_products):
 # FILTERING
 # =============================================================================
 
-def apply_filters(df, search_input, selected_categories, price_min, price_max,
-                  max_moq, max_delivery, selected_materials, selected_capacities):
+def apply_filters(df, search_input, filters):
     """Return a filtered and deduplicated DataFrame based on all active filters."""
     results = df.copy()
 
+    # --- חיפוש חופשי מתקדם: AND על מילים ---
     query = search_input.strip()
     if query and query.upper() != "ALL":
-        # פיצול לפי רווחים — כל מילה חייבת להופיע בטקסט המוצר (AND logic)
         raw_words = query.split()
         for word in raw_words:
-            norm_word  = normalize_text(word)          # המילה הנורמלית
-            trans_word = normalize_text(transform_he_to_en(word))  # תיקון מקלדת הפוכה
+            norm_word  = normalize_text(word)
+            trans_word = normalize_text(transform_he_to_en(word))
             results = results[
                 results['normalized_text'].str.contains(norm_word,  na=False) |
                 results['normalized_text'].str.contains(trans_word, na=False)
             ]
 
-    if selected_categories:
+    if filters['selected_categories']:
         results = results[results['categories'].apply(
-            lambda cats: any(c in cats for c in selected_categories)
+            lambda cats: any(c in cats for c in filters['selected_categories'])
         )]
 
-    if price_min > 0.0 or price_max < 200.0:
+    if filters['price_min'] > 0.0 or filters['price_max'] < 200.0:
         results = results[results['min_price'].apply(
-            lambda x: x is not None and price_min <= x <= price_max
+            lambda x: x is not None and filters['price_min'] <= x <= filters['price_max']
         )]
 
-    if max_moq is not None:
-        results = results[results['moq'].apply(lambda x: x is None or x <= max_moq)]
+    if filters['max_moq'] is not None:
+        results = results[results['moq'].apply(lambda x: x is None or x <= filters['max_moq'])]
 
-    if max_delivery < 90:
+    if filters['max_delivery'] < 90:
         results = results[results['delivery_days'].apply(
-            lambda x: x is not None and x <= max_delivery
+            lambda x: x is not None and x <= filters['max_delivery']
         )]
 
-    if selected_materials:
+    if filters['selected_materials']:
         results = results[results['materials'].apply(
-            lambda x: any(m in x for m in selected_materials)
+            lambda x: any(m in x for m in filters['selected_materials'])
         )]
 
-    if selected_capacities:
-        results = results[results['capacity'].isin(selected_capacities)]
+    if filters['selected_capacities']:
+        results = results[results['capacity'].isin(filters['selected_capacities'])]
+
+    # --- סינון ספק ---
+    if filters['selected_sources']:
+        results = results[results['file_source'].isin(filters['selected_sources'])]
+
+    # --- סינון איש רכש ---
+    if filters['selected_sourcers']:
+        results = results[results['sourcer'].isin(filters['selected_sourcers'])]
 
     return results.drop_duplicates(subset=['item_key', 'file_source'])
 
@@ -840,58 +991,64 @@ def apply_filters(df, search_input, selected_categories, price_min, price_max,
 def main():
     render_page_header()
 
-    # Load data once per session
+    # טעינת נתונים פעם אחת בלבד
     if 'df' not in st.session_state or 'img_map' not in st.session_state:
         st.session_state.df, st.session_state.img_map = load_all_data()
 
     df      = st.session_state.df
     img_map = st.session_state.img_map
 
-    # Sidebar returns all active filter values
-    (selected_categories, price_min, price_max,
-     max_moq, max_delivery, selected_materials, selected_capacities) = render_sidebar(df)
+    # סיידבר — מחזיר dict של כל ערכי הסינון
+    filters = render_sidebar(df)
 
-    # Search bar
+    # שורת חיפוש
     search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
 
     should_show = (
-        bool(search_input.strip()) or bool(selected_categories) or
-        bool(selected_materials) or bool(selected_capacities)
+        bool(search_input.strip()) or
+        bool(filters['selected_categories']) or
+        bool(filters['selected_materials']) or
+        bool(filters['selected_capacities']) or
+        bool(filters['selected_sources']) or
+        bool(filters['selected_sourcers'])
     )
     if df.empty or not should_show:
         return
 
-    # Apply all filters
-    results = apply_filters(
-        df, search_input, selected_categories, price_min, price_max,
-        max_moq, max_delivery, selected_materials, selected_capacities
-    )
+    # סינון
+    results = apply_filters(df, search_input, filters)
 
     if results.empty:
         st.warning("לא נמצאו תוצאות התואמות לחיפוש ולסינונים שלך.")
         return
 
-    # Reset page when filters change
+    # איפוס עמוד בעת שינוי סינון
     current_filters = (
-        search_input, tuple(selected_categories), price_min, price_max,
-        max_moq, max_delivery, tuple(selected_materials), tuple(selected_capacities)
+        search_input,
+        tuple(filters['selected_categories']),
+        filters['price_min'], filters['price_max'],
+        filters['max_moq'], filters['max_delivery'],
+        tuple(filters['selected_materials']),
+        tuple(filters['selected_capacities']),
+        tuple(filters['selected_sources']),
+        tuple(filters['selected_sourcers']),
     )
     if st.session_state.last_filters != current_filters:
         st.session_state.current_page = 0
         st.session_state.last_filters = current_filters
 
-    # Paginate
+    # Pagination
     total_products = len(results)
-    start = st.session_state.current_page * PRODUCTS_PER_PAGE
-    end   = min(start + PRODUCTS_PER_PAGE, total_products)
-    page_results = results.iloc[start:end]
+    start          = st.session_state.current_page * PRODUCTS_PER_PAGE
+    end            = min(start + PRODUCTS_PER_PAGE, total_products)
+    page_results   = results.iloc[start:end]
 
-    # Render product grid
+    # גריד מוצרים
     st.write("<br>", unsafe_allow_html=True)
     cols = st.columns(COLUMNS_PER_ROW)
     for i, (_, row) in enumerate(page_results.iterrows()):
         with cols[i % COLUMNS_PER_ROW]:
-            render_product_card(row, i, img_map)
+            render_product_card(row, i, img_map, filters['usd_ils_rate'])
 
     render_pagination(total_products)
 
