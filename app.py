@@ -268,24 +268,23 @@ def extract_moq(details_list):
 def extract_sourcer(details_list):
     """
     חילוץ שם איש הרכש.
-    תומך בפורמטים: 'SOURCER: DAISY', 'SOURCER:NANA', 'SOURCER NANA'
-    מחזיר את השם באותיות גדולות, או None אם לא נמצא.
+    תומך בפורמטים:
+      'SOURCER: DAISY', 'SOURCER:NANA', 'SOURCER NANA', 'SOURCER:daisy'
+    מחזיר את השם עם אות ראשונה גדולה בלבד (Title Case), למשל 'Daisy'.
     """
     for detail in details_list:
-        d_up = detail.upper()
-        if 'SOURCER' not in d_up:
+        if 'SOURCER' not in detail.upper():
             continue
-        # מחפש: המילה SOURCER, אחריה אפשר נקודתיים ורווחים, אחריה שם
+        # מחפש: SOURCER, אחריה אפשר נקודתיים ו/או רווחים (גם אפס רווחים), אחריה שם
         match = re.search(
-            r'SOURCER\s*:?\s+([A-Za-z\u0590-\u05FF]{2,})',
+            r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
             detail,
             re.IGNORECASE,
         )
         if match:
             name = match.group(1).strip()
-            # מסנן מילות-מפתח שאינן שמות
             if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
-                return name.upper()
+                return name.capitalize()   # אות ראשונה גדולה בלבד — Daisy
     return None
 
 
