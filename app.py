@@ -116,6 +116,11 @@ section[data-testid="stSidebar"] * {{
 }}
 .material-icons, .stIcon, svg, i {{ font-family: 'Material Icons' !important; }}
 
+/* ביטול CSS Variables של סטרימליט שמגדירים Serif */
+:root {{
+    --font-serif: {FONT_MAIN} !important;
+}}
+
 /* ===== HIDE STREAMLIT CHROME ===== */
 #MainMenu {{ visibility: hidden; }}
 footer    {{ visibility: hidden; }}
