@@ -109,6 +109,11 @@ html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *,
 .stText, p, h1, h2, h3, h4, h5, h6 {{
     font-family: {FONT_MAIN} !important;
 }}
+/* כפיית Arial על כל אלמנט בסיידבר — כולל כותרות st.header() שסטרימליט מרנדר כ-h2 */
+section[data-testid="stSidebar"] * {{
+    font-family: {FONT_MAIN} !important;
+    font-style: normal !important;
+}}
 .material-icons, .stIcon, svg, i {{ font-family: 'Material Icons' !important; }}
 
 /* ===== HIDE STREAMLIT CHROME ===== */
@@ -231,13 +236,13 @@ section[data-testid="stSidebar"] .stNumberInput input {{
 }}
 
 /* ===== PRODUCT CARD CONTAINER =====
-   Streamlit's st.container(border=True) renders as a div with inline border style.
-   We force a fixed height and flex-column so all cards align perfectly. */
+   height + min-height + max-height כולם 680px כדי שסטרימליט לא יוכל לשנות.
+   overflow:hidden חוסם כל גלישה שתשבש את היישור. */
 div[data-testid="stVerticalBlock"] > div[style*="border"] {{
     border-radius: 12px !important;
     border: 1px solid #f0f0f0 !important;
     box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-    background-color: white;
+    background-color: white !important;
     padding: 12px !important;
     direction: ltr !important;
     text-align: left !important;
@@ -252,12 +257,14 @@ div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
     box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
 }}
 
-/* ===== IMAGE AREA — fixed height, zoom OVERFLOWS outside card ===== */
+/* ===== IMAGE AREA — 220px קבוע, zoom בורח החוצה ===== */
 .img-box {{
     width: 100%;
-    height: {CARD_IMAGE_HEIGHT};
-    flex-shrink: 0;
-    overflow: visible;         /* CRITICAL: allows zoom to burst out of card */
+    height: 220px !important;
+    min-height: 220px !important;
+    max-height: 220px !important;
+    flex-shrink: 0 !important;
+    overflow: visible;             /* מאפשר לתמונה לצוף מעל הכרטיסייה בזום */
     border-radius: 8px;
     background: #fafafa;
     display: flex;
@@ -297,6 +304,29 @@ div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
     z-index: 99999 !important;
     position: relative;
     box-shadow: 0 16px 48px rgba(0,0,0,0.32);
+}}
+
+/* ===== DETAILS AREA — גדל למלא שטח פנוי, גולל פנימה, לא מתרחב החוצה ===== */
+.card-details {{
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 0 !important;   /* חיוני כדי ש-flex-grow יעבוד עם overflow */
+    text-align: left;
+    line-height: 1.55;
+    padding-right: 3px;
+    direction: ltr;
+    font-size: 13px;
+}}
+
+/* ===== CARD FOOTER — נשאר תמיד בתחתית ===== */
+.card-footer {{
+    flex-shrink: 0 !important;
+    margin-top: 6px;
+    border-top: 1px solid #eee;
+    padding-top: 6px;
+    text-align: left;
+    direction: ltr;
 }}
 
 /* ===== EMAIL BUTTON ===== */
@@ -792,8 +822,7 @@ def _build_price_footer_html(row, usd_ils_rate):
     )
 
     return (
-        f'<div style="flex-shrink:0; margin-top:6px; border-top:1px solid #eee; '
-        f'padding-top:6px; text-align:left; direction:ltr;">'
+        f'<div class="card-footer">'
         f'{price_usd_html}{price_ils_html}{meta_html}'
         f'</div>'
     )
@@ -854,8 +883,7 @@ def render_product_card(row, i, img_map, usd_ils_rate):
             )
 
         details_html = (
-            f'<div style="flex-grow:1; overflow-y:auto; max-height:{CARD_DETAILS_HEIGHT}; '
-            f'text-align:left; line-height:1.55; padding-right:3px; direction:ltr;">'
+            f'<div class="card-details">'
             f'{details_inner}</div>'
         )
 
