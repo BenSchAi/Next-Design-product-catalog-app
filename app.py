@@ -256,6 +256,17 @@ div[data-testid="stVerticalBlock"] > div[style*="border"] {{
 div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
     box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
 }}
+/* Streamlit wraps content in an extra stVerticalBlock inside the container.
+   We must also clamp that inner block so it cannot push the card taller. */
+div[data-testid="stVerticalBlock"] > div[style*="border"] > div[data-testid="stVerticalBlock"] {{
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+}}
 
 /* ===== IMAGE AREA — 220px קבוע, zoom בורח החוצה ===== */
 .img-box {{
@@ -891,8 +902,11 @@ def render_product_card(row, i, img_map, usd_ils_rate):
         footer_html = _build_price_footer_html(row, usd_ils_rate)
 
         # ── Assemble full card in one markdown call ────────────────
+        # גובה קבוע מפורש בפיקסלים על ה-wrapper הפנימי — לא מסתמך על height:100%
+        # שלא תמיד עובד בתוך nested Streamlit containers
         card_html = (
-            f'<div style="display:flex; flex-direction:column; height:100%; '
+            f'<div style="display:flex; flex-direction:column; '
+            f'height:610px; max-height:610px; overflow:hidden; '
             f'direction:ltr; text-align:left;">'
             f'{img_block}'
             f'<div style="flex-shrink:0;">{tags_html}</div>'
