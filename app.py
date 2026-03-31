@@ -402,9 +402,11 @@ def transform_he_to_en(text):
 
 
 def normalize_text(text):
+    """Normalize text for search: lowercase, keep alphanumeric + Hebrew + spaces."""
     if not isinstance(text, str):
         text = str(text)
-    return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF]', '', text).lower()
+    # שומרים רווחים כדי שנוכל להפריד בין מילים בחיפוש
+    return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF ]', ' ', text).lower()
 
 
 def classify_details(display_list):
@@ -790,13 +792,17 @@ def apply_filters(df, search_input, selected_categories, price_min, price_max,
     """Return a filtered and deduplicated DataFrame based on all active filters."""
     results = df.copy()
 
-    if search_input.strip() and search_input.strip().upper() != "ALL":
-        term = normalize_text(search_input)
-        term_trans = normalize_text(transform_he_to_en(search_input))
-        results = results[
-            results['normalized_text'].str.contains(term, na=False) |
-            results['normalized_text'].str.contains(term_trans, na=False)
-        ]
+    query = search_input.strip()
+    if query and query.upper() != "ALL":
+        # פיצול לפי רווחים — כל מילה חייבת להופיע בטקסט המוצר (AND logic)
+        raw_words = query.split()
+        for word in raw_words:
+            norm_word  = normalize_text(word)          # המילה הנורמלית
+            trans_word = normalize_text(transform_he_to_en(word))  # תיקון מקלדת הפוכה
+            results = results[
+                results['normalized_text'].str.contains(norm_word,  na=False) |
+                results['normalized_text'].str.contains(trans_word, na=False)
+            ]
 
     if selected_categories:
         results = results[results['categories'].apply(
