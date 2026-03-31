@@ -155,14 +155,24 @@ main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# JS zoom overlay — קריאה נפרדת (לא f-string) כדי שהסוגריים לא יתפרשו
-st.markdown("""
-<div id="img-zoom-overlay"><img src="" alt="zoom"/></div>
+# JS zoom overlay — components.html מריץ JS בתוך iframe ומגיע ל-window.parent
+import streamlit.components.v1 as components
+components.html("""
 <script>
 (function() {
-  var overlay = document.getElementById('img-zoom-overlay');
-  var overlayImg = overlay ? overlay.querySelector('img') : null;
-  if (!overlay || !overlayImg) return;
+  var doc = window.parent.document;
+
+  // יוצר את ה-overlay בחלון האב אם לא קיים
+  var overlay = doc.getElementById('img-zoom-overlay');
+  if (!overlay) {
+    overlay = doc.createElement('div');
+    overlay.id = 'img-zoom-overlay';
+    overlay.innerHTML = '<img src="" alt="zoom" style="width:100%;height:100%;object-fit:contain;border-radius:10px;display:block;"/>';
+    overlay.style.cssText = 'display:none;position:fixed;z-index:999999;pointer-events:none;border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,0.45);border:2px solid rgba(255,255,255,0.7);background:#fff;transition:opacity 0.18s ease;opacity:0;';
+    doc.body.appendChild(overlay);
+  }
+  var overlayImg = overlay.querySelector('img');
+
   var ZOOM_SIZE = 380;
   var MARGIN = 16;
   var hideTimer = null;
@@ -172,45 +182,42 @@ st.markdown("""
     overlayImg.src = src;
     var left = rect.right + MARGIN;
     var top  = rect.top + (rect.height / 2) - (ZOOM_SIZE / 2);
-    if (left + ZOOM_SIZE > window.innerWidth - MARGIN) {
+    if (left + ZOOM_SIZE > window.parent.innerWidth - MARGIN) {
       left = rect.left - ZOOM_SIZE - MARGIN;
     }
     if (left < MARGIN) left = MARGIN;
     if (top < MARGIN) top = MARGIN;
-    if (top + ZOOM_SIZE > window.innerHeight - MARGIN) {
-      top = window.innerHeight - ZOOM_SIZE - MARGIN;
+    if (top + ZOOM_SIZE > window.parent.innerHeight - MARGIN) {
+      top = window.parent.innerHeight - ZOOM_SIZE - MARGIN;
     }
     overlay.style.width   = ZOOM_SIZE + 'px';
     overlay.style.height  = ZOOM_SIZE + 'px';
     overlay.style.left    = left + 'px';
     overlay.style.top     = top  + 'px';
     overlay.style.display = 'block';
-    requestAnimationFrame(function() { overlay.classList.add('visible'); });
+    requestAnimationFrame(function() { overlay.style.opacity = '1'; });
   }
 
   function hideOverlay() {
-    overlay.classList.remove('visible');
+    overlay.style.opacity = '0';
     hideTimer = setTimeout(function() { overlay.style.display = 'none'; }, 180);
   }
 
-  document.addEventListener('mouseover', function(e) {
+  doc.addEventListener('mouseover', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img || !img.src || img.src.startsWith('data:,')) return;
     var rect = img.getBoundingClientRect();
     showOverlay(img.src, rect);
   });
 
-  document.addEventListener('mouseout', function(e) {
+  doc.addEventListener('mouseout', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img) return;
-    if (e.relatedTarget && (e.relatedTarget === overlay || overlay.contains(e.relatedTarget))) return;
     hideOverlay();
   });
-
-  overlay.addEventListener('mouseleave', hideOverlay);
 })();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 
 
