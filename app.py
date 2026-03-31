@@ -120,6 +120,27 @@ section[data-testid="stSidebar"] * {{
 :root {{
     --font-serif: {FONT_MAIN} !important;
 }}
+</style>
+
+<script>
+/* סטרימליט מחיל font-family דרך inline style על h1/h2 בסיידבר.
+   CSS לא יכול לדרוס inline style — רק JS יכול. */
+function fixSidebarFonts() {{
+    const sidebar = document.querySelector('[data-testid="stSidebar"]');
+    if (!sidebar) return;
+    const headings = sidebar.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    headings.forEach(el => {{
+        el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
+        el.style.setProperty('font-style', 'normal', 'important');
+    }});
+}}
+/* הרץ מיד ואחרי כל שינוי ב-DOM */
+fixSidebarFonts();
+const observer = new MutationObserver(fixSidebarFonts);
+observer.observe(document.body, {{ childList: true, subtree: true }});
+</script>
+
+<style>
 
 /* ===== HIDE STREAMLIT CHROME ===== */
 #MainMenu {{ visibility: hidden; }}
