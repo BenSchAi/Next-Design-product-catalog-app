@@ -483,6 +483,95 @@ def get_image_base64(file_id):
         return None
 
 
+def extract_file_header(df_file):
+    """
+    סורק את 15 השורות הראשונות ו-10 העמודות הראשונות של הקובץ
+    ומחלץ SOURCER ו-DATE ברמת הקובץ כולו.
+    תומך בפורמטים: 'SOURCER:daisy', 'SOURCER: DAISY', 'DATE:12th,mar,2026' וכו'.
+    מחזיר (sourcer_str, date_str) — כל אחד יכול להיות None.
+    """
+    sourcer = None
+    date    = None
+
+    max_rows = min(15, len(df_file))
+    max_cols = min(10, len(df_file.columns))
+
+    for r in range(max_rows):
+        for c in range(max_cols):
+            cell = df_file.iloc[r, c]
+            if pd.isna(cell):
+                continue
+            cell_str = str(cell).strip()
+            cell_up  = cell_str.upper()
+
+            # --- SOURCER ---
+            if sourcer is None and 'SOURCER' in cell_up:
+                # פורמט בתא אחד: "SOURCER:daisy" או "SOURCER: Daisy" או "SOURCER Daisy"
+                m = re.search(r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})', cell_str, re.IGNORECASE)
+                if m:
+                    name = m.group(1).strip()
+                    if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
+                        sourcer = name.capitalize()
+                else:
+                    # אולי השם בתא הסמוך (עמודה הבאה)
+                    if c + 1 < max_cols:
+                        next_cell = df_file.iloc[r, c + 1]
+                        if not pd.isna(next_cell):
+                            name = str(next_cell).strip()
+                            if re.match(r'^[A-Za-z\u0590-\u05FF]{2,}$', name):
+                                sourcer = name.capitalize()
+
+            # --- DATE ---
+            if date is None and 'DATE' in cell_up:
+                # פורמט: 25th,mar,2026
+                m = re.search(
+                    r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
+                    cell_str, re.IGNORECASE
+                )
+                if m:
+                    date = f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
+                else:
+                    # פורמט: Jan 15, 2024 או 15 Jan 2024
+                    m = re.search(
+                        r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})',
+                        cell_str, re.IGNORECASE
+                    )
+                    if m:
+                        date = f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
+                    else:
+                        # פורמטים מספריים
+                        m = re.search(
+                            r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
+                            cell_str
+                        )
+                        if m:
+                            date = m.group(1).strip()
+                        else:
+                            # תאריך בתא הסמוך
+                            if c + 1 < max_cols:
+                                next_cell = df_file.iloc[r, c + 1]
+                                if not pd.isna(next_cell):
+                                    nc_str = str(next_cell).strip()
+                                    m2 = re.search(
+                                        r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
+                                        nc_str, re.IGNORECASE
+                                    )
+                                    if m2:
+                                        date = f"{m2.group(1)} {m2.group(2).capitalize()} {m2.group(3)}"
+                                    else:
+                                        m2 = re.search(
+                                            r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
+                                            nc_str
+                                        )
+                                        if m2:
+                                            date = m2.group(1).strip()
+
+            if sourcer and date:
+                return sourcer, date
+
+    return sourcer, date
+
+
 @st.cache_data(ttl=600)
 def load_all_data():
     service = get_gdrive_service()
@@ -511,6 +600,9 @@ def load_all_data():
                 fh, header=None,
                 engine='xlrd' if item['name'].endswith('.xls') else None,
             )
+
+            # --- חילוץ SOURCER ו-DATE ברמת הקובץ (15 שורות ראשונות) ---
+            file_sourcer, file_date = extract_file_header(df_file)
 
             skip_until = -1
             for idx in range(len(df_file)):
@@ -558,8 +650,8 @@ def load_all_data():
                             'capacity':        extract_capacity(full_text_str),
                             'materials':       extract_materials(full_text_str),
                             'categories':      extract_categories(details),
-                            'sourcer':         extract_sourcer(details),
-                            'date':            extract_date(details),
+                            'sourcer':         file_sourcer,   # ← מהכותרת הקובץ
+                            'date':            file_date,       # ← מהכותרת הקובץ
                         })
         except:
             continue
