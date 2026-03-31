@@ -104,297 +104,48 @@ if 'last_filters' not in st.session_state:
 
 st.markdown(f"""
 <style>
-/* ===== GLOBAL FONT ===== */
+:root {{{{ --font-serif: Arial, sans-serif; --font-sans: Arial, sans-serif; }}
 html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *,
-.stText, p, h1, h2, h3, h4, h5, h6 {{
-    font-family: {FONT_MAIN} !important;
-}}
-/* כפיית Arial על כל אלמנט בסיידבר — כולל כותרות st.header() שסטרימליט מרנדר כ-h2 */
-section[data-testid="stSidebar"] * {{
-    font-family: {FONT_MAIN} !important;
-    font-style: normal !important;
-}}
-.material-icons, .stIcon, svg, i {{ font-family: 'Material Icons' !important; }}
-
-/* ביטול CSS Variables של סטרימליט שמגדירים Serif */
-:root {{
-    --font-serif: Arial, sans-serif !important;
-}}
-/* דריסה ספציפית של כותרות בתוך stMarkdownContainer בסיידבר */
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h1,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h2,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h3,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h1 *,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h2 *,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h3 *,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] div,
-section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] span {{
+section[data-testid="stSidebar"], section[data-testid="stSidebar"] *,
+.stText, p, h1, h2, h3, h4, h5, h6 {{{{
     font-family: Arial, sans-serif !important;
     font-style: normal !important;
 }}
-</style>
-
-<script>
-/* סטרימליט מחיל font-family דרך inline style על h1/h2 בסיידבר.
-   CSS לא יכול לדרוס inline style — רק JS יכול. */
-function fixSidebarFonts() {{
-    const sidebar = document.querySelector('[data-testid="stSidebar"]');
-    if (!sidebar) return;
-    const headings = sidebar.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    headings.forEach(el => {{
-        el.style.setProperty('font-family', 'Arial, sans-serif', 'important');
-        el.style.setProperty('font-style', 'normal', 'important');
-    }});
-}}
-/* הרץ מיד ואחרי כל שינוי ב-DOM */
-fixSidebarFonts();
-const observer = new MutationObserver(fixSidebarFonts);
-observer.observe(document.body, {{ childList: true, subtree: true }});
-</script>
-
-<style>
-
-/* ===== HIDE STREAMLIT CHROME ===== */
+.material-icons, .stIcon, svg, i {{ font-family: "Material Icons" !important; }}
 #MainMenu {{ visibility: hidden; }}
-footer    {{ visibility: hidden; }}
-header    {{ background-color: transparent !important; }}
+footer {{ visibility: hidden; }}
+header {{ background-color: transparent !important; }}
 [data-testid="stSidebarHeader"] {{ display: none !important; }}
-
-/* ===== SIDEBAR ===== */
-section[data-testid="stSidebar"] .block-container {{
-    padding-top: 1.5rem !important;
-    padding-bottom: 2rem !important;
-}}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] .stMarkdown h1,
-section[data-testid="stSidebar"] .stMarkdown h2,
-section[data-testid="stSidebar"] .stMarkdown h3,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
-section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] * {{
-    font-family: {FONT_MAIN} !important;
-}}
-[data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] h1,
-section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] .stMarkdown h2 {{
-    font-family: {FONT_MAIN} !important;
-    color: {COLOR_PRIMARY} !important;
-    font-weight: 900 !important;
-    font-size: 1.6rem !important;
-    border-bottom: 3px solid {COLOR_SIDEBAR_BORDER} !important;
-    padding-bottom: 6px !important;
-    margin-bottom: 18px !important;
-    margin-top: 0 !important;
-    text-align: right !important;
-    direction: rtl !important;
-    width: 100%;
-    display: block;
-}}
-section[data-testid="stSidebar"] label p {{
-    font-family: {FONT_MAIN} !important;
-    color: {COLOR_TEXT_DARK} !important;
-    font-weight: 700 !important;
-    font-size: 15px !important;
-    text-align: right !important;
-    direction: rtl !important;
-    width: 100%;
-}}
-[data-testid="stWidgetLabel"] p {{
-    direction: rtl !important;
-    text-align: right !important;
-    font-family: {FONT_MAIN} !important;
-}}
-section[data-testid="stSidebar"] .stSlider > label,
-section[data-testid="stSidebar"] .stNumberInput > label {{
-    text-align: right !important;
-    direction: rtl !important;
-    display: block !important;
-    width: 100% !important;
-    font-family: {FONT_MAIN} !important;
-}}
-section[data-testid="stSidebar"] .stSlider input[type="range"],
-section[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {{
-    direction: ltr !important;
-}}
-section[data-testid="stSidebar"] .stNumberInput input {{
-    direction: ltr !important;
-    text-align: left !important;
-}}
-
-/* ===== MULTISELECT / SELECTBOX ===== */
-.stMultiSelect {{
-    position: relative !important;
-    width: 100% !important;
-    max-width: 100% !important;
-}}
-.stMultiSelect [data-baseweb="popover"] {{
-    position: absolute !important; left: 0 !important; right: auto !important;
-    width: fit-content !important; max-width: 280px !important; min-width: 200px !important;
-    overflow: hidden !important; white-space: normal !important;
-    word-break: break-word !important; box-sizing: border-box !important; z-index: 9999 !important;
-}}
-[data-testid="stVirtualDropdown"] {{
-    position: absolute !important; left: 0 !important; right: auto !important;
-    max-width: 280px !important; overflow: hidden !important;
-}}
-.stMultiSelect div[data-baseweb="select"] {{
-    max-width: 100% !important; direction: rtl !important; width: 100% !important;
-    position: relative !important; overflow: visible !important;
-}}
-.stMultiSelect [data-baseweb="select"] [role="option"] {{
-    word-wrap: break-word !important; white-space: normal !important;
-}}
+section[data-testid="stSidebar"] .block-container {{ padding-top: 1.5rem !important; padding-bottom: 2rem !important; }}
+section[data-testid="stSidebar"] label p {{ font-family: Arial, sans-serif !important; color: {COLOR_TEXT_DARK} !important; font-weight: 700 !important; font-size: 15px !important; text-align: right !important; direction: rtl !important; width: 100%; }}
+[data-testid="stWidgetLabel"] p {{ direction: rtl !important; text-align: right !important; font-family: Arial, sans-serif !important; }}
+section[data-testid="stSidebar"] .stSlider > label, section[data-testid="stSidebar"] .stNumberInput > label {{ text-align: right !important; direction: rtl !important; display: block !important; width: 100% !important; font-family: Arial, sans-serif !important; }}
+section[data-testid="stSidebar"] .stSlider input[type="range"], section[data-testid="stSidebar"] .stSlider [data-baseweb="slider"] {{ direction: ltr !important; }}
+section[data-testid="stSidebar"] .stNumberInput input {{ direction: ltr !important; text-align: left !important; }}
+.stMultiSelect {{ position: relative !important; width: 100% !important; max-width: 100% !important; }}
+.stMultiSelect [data-baseweb="popover"] {{ position: absolute !important; left: 0 !important; right: auto !important; width: fit-content !important; max-width: 280px !important; min-width: 200px !important; overflow: hidden !important; white-space: normal !important; word-break: break-word !important; box-sizing: border-box !important; z-index: 9999 !important; }}
+[data-testid="stVirtualDropdown"] {{ position: absolute !important; left: 0 !important; right: auto !important; max-width: 280px !important; overflow: hidden !important; }}
+.stMultiSelect div[data-baseweb="select"] {{ max-width: 100% !important; direction: rtl !important; width: 100% !important; position: relative !important; overflow: visible !important; }}
+.stMultiSelect [data-baseweb="select"] [role="option"] {{ word-wrap: break-word !important; white-space: normal !important; }}
 .stSelectbox div[data-baseweb="select"] {{ width: 100% !important; position: relative !important; }}
-.stSelectbox [data-baseweb="popover"] {{
-    position: absolute !important; left: 0 !important; right: auto !important;
-    max-width: 280px !important; overflow: hidden !important;
-}}
-
-/* ===== SEARCH BAR ===== */
-.stTextInput > div > div > input {{
-    font-family: {FONT_MAIN} !important;
-    border-radius: 30px !important; border: 2px solid #eaeaea !important;
-    padding: 15px 20px !important; font-size: 16px !important;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
-    text-align: left !important; direction: ltr !important;
-}}
-.stTextInput > div > div > input:focus {{
-    border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-}}
-
-/* ===== PRODUCT CARD CONTAINER =====
-   height + min-height + max-height כולם 680px כדי שסטרימליט לא יוכל לשנות.
-   overflow:hidden חוסם כל גלישה שתשבש את היישור. */
-div[data-testid="stVerticalBlock"] > div[style*="border"] {{
-    border-radius: 12px !important;
-    border: 1px solid #f0f0f0 !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-    background-color: white !important;
-    padding: 12px !important;
-    direction: ltr !important;
-    text-align: left !important;
-    height: 680px !important;
-    min-height: 680px !important;
-    max-height: 680px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-}}
-div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
-    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
-}}
-/* Streamlit wraps content in an extra stVerticalBlock inside the container.
-   We must also clamp that inner block so it cannot push the card taller. */
-div[data-testid="stVerticalBlock"] > div[style*="border"] > div[data-testid="stVerticalBlock"] {{
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-}}
-
-/* ===== IMAGE AREA — 220px קבוע, zoom בורח החוצה ===== */
-.img-box {{
-    width: 100%;
-    height: 220px !important;
-    min-height: 220px !important;
-    max-height: 220px !important;
-    flex-shrink: 0 !important;
-    overflow: visible;             /* מאפשר לתמונה לצוף מעל הכרטיסייה בזום */
-    border-radius: 8px;
-    background: #fafafa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    z-index: 1;
-    margin-bottom: 6px;
-}}
-/* Date badge — top-left corner of image area */
-.img-box .date-badge {{
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    background: rgba(0,0,0,0.52);
-    color: #fff;
-    font-size: 10px;
-    padding: 2px 7px;
-    border-radius: 4px;
-    white-space: nowrap;
-    z-index: 10;
-    font-family: {FONT_MAIN};
-}}
-/* Image — bursts OUT of card on hover, floats above everything */
-.img-box img {{
-    max-width: 100%;
-    max-height: {CARD_IMAGE_HEIGHT};
-    object-fit: contain;
-    border-radius: 4px;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    position: relative;
-    z-index: 1;
-    cursor: zoom-in;
-}}
-.img-box:hover img {{
-    transform: scale(2.4);
-    z-index: 99999 !important;
-    position: relative;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.32);
-}}
-
-/* ===== DETAILS AREA — גדל למלא שטח פנוי, גולל פנימה, לא מתרחב החוצה ===== */
-.card-details {{
-    flex-grow: 1 !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    min-height: 0 !important;   /* חיוני כדי ש-flex-grow יעבוד עם overflow */
-    text-align: left;
-    line-height: 1.55;
-    padding-right: 3px;
-    direction: ltr;
-    font-size: 13px;
-}}
-
-/* ===== CARD FOOTER — נשאר תמיד בתחתית ===== */
-.card-footer {{
-    flex-shrink: 0 !important;
-    margin-top: 6px;
-    border-top: 1px solid #eee;
-    padding-top: 6px;
-    text-align: left;
-    direction: ltr;
-}}
-
-/* ===== EMAIL BUTTON ===== */
-.email-btn {{
-    display: block; width: 100%; text-align: center;
-    background-color: {COLOR_PRICE}; color: white !important;
-    padding: 10px; border-radius: 8px; text-decoration: none;
-    font-weight: bold; margin-top: 20px; transition: background-color 0.3s;
-    font-family: {FONT_MAIN} !important;
-}}
+.stSelectbox [data-baseweb="popover"] {{ position: absolute !important; left: 0 !important; right: auto !important; max-width: 280px !important; overflow: hidden !important; }}
+.stTextInput > div > div > input {{ font-family: Arial, sans-serif !important; border-radius: 30px !important; border: 2px solid #eaeaea !important; padding: 15px 20px !important; font-size: 16px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; text-align: left !important; direction: ltr !important; }}
+.stTextInput > div > div > input:focus {{ border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important; }}
+div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 12px !important; border: 1px solid #f0f0f0 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important; background-color: white !important; padding: 12px !important; direction: ltr !important; text-align: left !important; height: 680px !important; min-height: 680px !important; max-height: 680px !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }}
+div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{ box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }}
+div[data-testid="stVerticalBlock"] > div[style*="border"] > div[data-testid="stVerticalBlock"] {{ height: 100% !important; max-height: 100% !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; flex: 1 1 auto !important; min-height: 0 !important; }}
+.img-box {{ width: 100%; height: 220px !important; min-height: 220px !important; max-height: 220px !important; flex-shrink: 0 !important; overflow: visible; border-radius: 8px; background: #fafafa; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; margin-bottom: 6px; }}
+.img-box .date-badge {{ position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.52); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; z-index: 10; font-family: Arial, sans-serif; }}
+.img-box img {{ max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; z-index: 1; cursor: zoom-in; }}
+.img-box:hover img {{ transform: scale(2.4); z-index: 99999 !important; box-shadow: 0 16px 48px rgba(0,0,0,0.32); }}
+.card-details {{ flex-grow: 1 !important; overflow-y: auto !important; overflow-x: hidden !important; min-height: 0 !important; text-align: left; line-height: 1.55; padding-right: 3px; direction: ltr; font-size: 13px; }}
+.card-footer {{ flex-shrink: 0 !important; margin-top: 6px; border-top: 1px solid #eee; padding-top: 6px; text-align: left; direction: ltr; }}
+.email-btn {{ display: block; width: 100%; text-align: center; background-color: {COLOR_PRICE}; color: white !important; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 20px; transition: background-color 0.3s; font-family: Arial, sans-serif !important; }}
 .email-btn:hover {{ background-color: {COLOR_SUCCESS}; }}
-
-/* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
 ::-webkit-scrollbar-track {{ background: #f1f1f1; border-radius: 10px; }}
 ::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
 ::-webkit-scrollbar-thumb:hover {{ background: #999; }}
-
-/* ===== NO HORIZONTAL SCROLL ===== */
 html, body {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 .main, .block-container {{ overflow-x: hidden !important; max-width: 100% !important; }}
 main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
