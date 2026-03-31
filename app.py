@@ -128,10 +128,23 @@ section[data-testid="stSidebar"] .block-container {{
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
 section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] .stMarkdown h1,
 section[data-testid="stSidebar"] .stMarkdown h2,
+section[data-testid="stSidebar"] .stMarkdown h3,
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
 [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {{
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] * {{
+    font-family: {FONT_MAIN} !important;
+}}
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] .stMarkdown h2 {{
     font-family: {FONT_MAIN} !important;
     color: {COLOR_PRIMARY} !important;
     font-weight: 900 !important;
@@ -228,27 +241,30 @@ div[data-testid="stVerticalBlock"] > div[style*="border"] {{
     padding: 12px !important;
     direction: ltr !important;
     text-align: left !important;
-    height: {CARD_HEIGHT} !important;
+    height: 680px !important;
+    min-height: 680px !important;
+    max-height: 680px !important;
     display: flex !important;
     flex-direction: column !important;
-    overflow: hidden !important;      /* prevents card from expanding */
+    overflow: hidden !important;
 }}
 div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
     box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
 }}
 
-/* ===== IMAGE AREA — fixed height, overflow:hidden to prevent layout push ===== */
+/* ===== IMAGE AREA — fixed height, zoom OVERFLOWS outside card ===== */
 .img-box {{
     width: 100%;
     height: {CARD_IMAGE_HEIGHT};
     flex-shrink: 0;
-    overflow: hidden;          /* CRITICAL: clips the image to exactly 220px */
+    overflow: visible;         /* CRITICAL: allows zoom to burst out of card */
     border-radius: 8px;
     background: #fafafa;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    z-index: 1;
     margin-bottom: 6px;
 }}
 /* Date badge — top-left corner of image area */
@@ -265,17 +281,22 @@ div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
     z-index: 10;
     font-family: {FONT_MAIN};
 }}
-/* Hover zoom — image grows inside the clipped container, no layout shift */
+/* Image — bursts OUT of card on hover, floats above everything */
 .img-box img {{
     max-width: 100%;
     max-height: {CARD_IMAGE_HEIGHT};
     object-fit: contain;
     border-radius: 4px;
-    transition: transform 0.28s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    position: relative;
+    z-index: 1;
     cursor: zoom-in;
 }}
 .img-box:hover img {{
-    transform: scale(1.85);
+    transform: scale(2.4);
+    z-index: 99999 !important;
+    position: relative;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.32);
 }}
 
 /* ===== EMAIL BUTTON ===== */
