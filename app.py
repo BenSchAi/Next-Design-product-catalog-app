@@ -118,7 +118,19 @@ section[data-testid="stSidebar"] * {{
 
 /* ביטול CSS Variables של סטרימליט שמגדירים Serif */
 :root {{
-    --font-serif: {FONT_MAIN} !important;
+    --font-serif: Arial, sans-serif !important;
+}}
+/* דריסה ספציפית של כותרות בתוך stMarkdownContainer בסיידבר */
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h1,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h2,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h3,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h1 *,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h2 *,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] h3 *,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] div,
+section[data-testid="stSidebar"] div[data-testid="stMarkdownContainer"] span {{
+    font-family: Arial, sans-serif !important;
+    font-style: normal !important;
 }}
 </style>
 
@@ -950,10 +962,14 @@ def render_product_card(row, i, img_map, usd_ils_rate):
 def _render_cart_section():
     """Cart section — appears at the TOP of the sidebar."""
     st.markdown(
-        f"<h2 style='font-family:{FONT_MAIN}; color:{COLOR_PRIMARY}; font-weight:900; "
-        f"font-size:1.6rem; border-bottom:3px solid {COLOR_SIDEBAR_BORDER}; "
+        f"<div style='font-family:Arial,sans-serif !important;'>"
+        f"<h2 style='font-family:Arial,sans-serif !important; color:{COLOR_PRIMARY}; "
+        f"font-weight:900; font-size:1.6rem; "
+        f"border-bottom:3px solid {COLOR_SIDEBAR_BORDER}; "
         f"padding-bottom:6px; margin-bottom:18px; margin-top:0; "
-        f"text-align:right; direction:rtl;'>🛒 מוצרים לשליחה</h2>",
+        f"text-align:right; direction:rtl;'>"
+        f"<span style='font-family:Arial,sans-serif !important;'>🛒 מוצרים לשליחה</span>"
+        f"</h2></div>",
         unsafe_allow_html=True,
     )
 
@@ -1003,10 +1019,14 @@ def render_sidebar(df):
 
         # 2. סינון
         st.markdown(
-            f"<h2 style='font-family:{FONT_MAIN}; color:{COLOR_PRIMARY}; font-weight:900; "
-            f"font-size:1.6rem; border-bottom:3px solid {COLOR_SIDEBAR_BORDER}; "
+            f"<div style='font-family:Arial,sans-serif !important;'>"
+            f"<h2 style='font-family:Arial,sans-serif !important; color:{COLOR_PRIMARY}; "
+            f"font-weight:900; font-size:1.6rem; "
+            f"border-bottom:3px solid {COLOR_SIDEBAR_BORDER}; "
             f"padding-bottom:6px; margin-bottom:18px; margin-top:0; "
-            f"text-align:right; direction:rtl;'>⚙️ סינון חכם</h2>",
+            f"text-align:right; direction:rtl;'>"
+            f"<span style='font-family:Arial,sans-serif !important;'>⚙️ סינון חכם</span>"
+            f"</h2></div>",
             unsafe_allow_html=True,
         )
 
