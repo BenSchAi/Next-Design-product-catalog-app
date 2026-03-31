@@ -134,10 +134,12 @@ section[data-testid="stSidebar"] .stNumberInput input {{ direction: ltr !importa
 div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 12px !important; border: 1px solid #f0f0f0 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important; background-color: white !important; padding: 12px !important; direction: ltr !important; text-align: left !important; height: 680px !important; min-height: 680px !important; max-height: 680px !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; }}
 div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{ box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }}
 div[data-testid="stVerticalBlock"] > div[style*="border"] > div[data-testid="stVerticalBlock"] {{ height: 100% !important; max-height: 100% !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; flex: 1 1 auto !important; min-height: 0 !important; }}
-.img-box {{ width: 100%; height: 220px !important; min-height: 220px !important; max-height: 220px !important; flex-shrink: 0 !important; overflow: visible; border-radius: 8px; background: #fafafa; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; margin-bottom: 6px; }}
+.img-box {{ width: 100%; height: 220px !important; min-height: 220px !important; max-height: 220px !important; flex-shrink: 0 !important; overflow: hidden; border-radius: 8px; background: #fafafa; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; margin-bottom: 6px; }}
 .img-box .date-badge {{ position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.52); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; z-index: 10; font-family: Arial, sans-serif; }}
-.img-box img {{ max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px; transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; z-index: 1; cursor: zoom-in; }}
-.img-box:hover img {{ transform: scale(2.4); z-index: 99999 !important; box-shadow: 0 16px 48px rgba(0,0,0,0.32); }}
+.img-box img {{ max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px; transition: none; position: relative; z-index: 1; cursor: zoom-in; }}
+#img-zoom-overlay {{ display:none; position:fixed; z-index:999999; pointer-events:none; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.45); border:2px solid rgba(255,255,255,0.6); transition: opacity 0.18s ease; opacity:0; background:#fff; }}
+#img-zoom-overlay.visible {{ display:block; opacity:1; }}
+#img-zoom-overlay img {{ width:100%; height:100%; object-fit:contain; border-radius:10px; display:block; }}
 .card-details {{ flex-grow: 1 !important; overflow-y: auto !important; overflow-x: hidden !important; min-height: 0 !important; text-align: left; line-height: 1.55; padding-right: 3px; direction: ltr; font-size: 13px; }}
 .card-footer {{ flex-shrink: 0 !important; margin-top: 6px; border-top: 1px solid #eee; padding-top: 6px; text-align: left; direction: ltr; }}
 .email-btn {{ display: block; width: 100%; text-align: center; background-color: {COLOR_PRICE}; color: white !important; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 20px; transition: background-color 0.3s; font-family: Arial, sans-serif !important; }}
@@ -151,7 +153,61 @@ html, body {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 * {{ max-width: 100% !important; box-sizing: border-box !important; }}
 </style>
+<div id="img-zoom-overlay"><img src="" alt="zoom"/></div>
+<script>
+(function() {{
+  var overlay = document.getElementById('img-zoom-overlay');
+  var overlayImg = overlay ? overlay.querySelector('img') : null;
+  if (!overlay || !overlayImg) return;
+  var ZOOM_SIZE = 380;
+  var MARGIN = 16;
+  var hideTimer = null;
+
+  function showOverlay(src, rect) {{
+    clearTimeout(hideTimer);
+    overlayImg.src = src;
+    var left = rect.right + MARGIN;
+    var top  = rect.top + (rect.height / 2) - (ZOOM_SIZE / 2);
+    if (left + ZOOM_SIZE > window.innerWidth - MARGIN) {{
+      left = rect.left - ZOOM_SIZE - MARGIN;
+    }}
+    if (left < MARGIN) left = MARGIN;
+    if (top < MARGIN) top = MARGIN;
+    if (top + ZOOM_SIZE > window.innerHeight - MARGIN) {{
+      top = window.innerHeight - ZOOM_SIZE - MARGIN;
+    }}
+    overlay.style.width   = ZOOM_SIZE + 'px';
+    overlay.style.height  = ZOOM_SIZE + 'px';
+    overlay.style.left    = left + 'px';
+    overlay.style.top     = top  + 'px';
+    overlay.style.display = 'block';
+    requestAnimationFrame(function() {{ overlay.classList.add('visible'); }});
+  }}
+
+  function hideOverlay() {{
+    overlay.classList.remove('visible');
+    hideTimer = setTimeout(function() {{ overlay.style.display = 'none'; }}, 180);
+  }}
+
+  document.addEventListener('mouseover', function(e) {{
+    var img = e.target.closest ? e.target.closest('.img-box img') : null;
+    if (!img || !img.src || img.src.startsWith('data:,')) return;
+    var rect = img.getBoundingClientRect();
+    showOverlay(img.src, rect);
+  }});
+
+  document.addEventListener('mouseout', function(e) {{
+    var img = e.target.closest ? e.target.closest('.img-box img') : null;
+    if (!img) return;
+    if (e.relatedTarget && (e.relatedTarget === overlay || overlay.contains(e.relatedTarget))) return;
+    hideOverlay();
+  }});
+
+  overlay.addEventListener('mouseleave', hideOverlay);
+}})();
+</script>
 """, unsafe_allow_html=True)
+
 
 
 # =============================================================================
