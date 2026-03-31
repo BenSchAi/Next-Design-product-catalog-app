@@ -928,7 +928,13 @@ def render_product_card(row, i, img_map, usd_ils_rate):
 
 def _render_cart_section():
     """Cart section — appears at the TOP of the sidebar."""
-    st.header("🛒 מוצרים לשליחה")
+    st.markdown(
+        f"<h2 style='font-family:{FONT_MAIN}; color:{COLOR_PRIMARY}; font-weight:900; "
+        f"font-size:1.6rem; border-bottom:3px solid {COLOR_SIDEBAR_BORDER}; "
+        f"padding-bottom:6px; margin-bottom:18px; margin-top:0; "
+        f"text-align:right; direction:rtl;'>🛒 מוצרים לשליחה</h2>",
+        unsafe_allow_html=True,
+    )
 
     if not st.session_state.selected_items:
         st.info("לא נבחרו מוצרים עדיין.")
@@ -975,7 +981,13 @@ def render_sidebar(df):
         st.divider()
 
         # 2. סינון
-        st.header("⚙️ סינון חכם")
+        st.markdown(
+            f"<h2 style='font-family:{FONT_MAIN}; color:{COLOR_PRIMARY}; font-weight:900; "
+            f"font-size:1.6rem; border-bottom:3px solid {COLOR_SIDEBAR_BORDER}; "
+            f"padding-bottom:6px; margin-bottom:18px; margin-top:0; "
+            f"text-align:right; direction:rtl;'>⚙️ סינון חכם</h2>",
+            unsafe_allow_html=True,
+        )
 
         selected_categories = st.multiselect(
             "קטגוריה (Category)", list(CATEGORY_MAP.keys()), placeholder="בחר קטגוריות..."
