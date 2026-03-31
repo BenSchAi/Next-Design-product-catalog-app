@@ -33,35 +33,46 @@ COLOR_PACKING        = "#666"      # אפור בינוני (אריזה)
 COLOR_OTHER          = "#888"      # אפור בהיר (שאר)
 COLOR_GENERAL        = "#222"      # כמעט שחור (כותרת מוצר)
 COLOR_SAMPLE         = "#d35400"   # כתום (זמן דוגמית)
-COLOR_SOURCE         = "#aaa"      # אפור (מקור קובץ)
+COLOR_SOURCE         = "#aaa"      # אפור (מקור קובץ / תאריך)
 COLOR_MOQ_OK         = "#f1c40f"   # זהב (MOQ תקין)
 COLOR_MOQ_NAN        = "#e74c3c"   # אדום (MOQ חסר)
 COLOR_TAG_BG         = "#333"      # רקע תגיות קטגוריה
 COLOR_CAPACITY_BG    = "#eee"      # רקע תגית נפח
 COLOR_CAPACITY_TEXT  = "#333"      # טקסט תגית נפח
 COLOR_SUCCESS        = "#219653"   # ירוק כהה (hover כפתור מייל)
+COLOR_SOURCER_BG     = "#e0e7ff"   # תכלת (רקע תגית Sourcer)
+COLOR_SOURCER_TEXT   = "#3730a3"   # כחול כהה (טקסט תגית Sourcer)
 
 # --- Font ---
 FONT_MAIN = "'Arial', sans-serif"
 
-# --- Card dimensions ---
-CARD_HEIGHT       = "720px"   # הוגדל מעט כדי לאכלס את שורת השקלים
-CARD_IMAGE_HEIGHT = "200px"
+# --- Card dimensions (גובה קבוע לכל הכרטיסיות) ---
+CARD_HEIGHT       = "760px"
+CARD_IMAGE_HEIGHT = "220px"   # גובה קבוע לאזור התמונה — לא ניתן לשינוי על ידי תוכן
 
 # --- Currency defaults ---
 DEFAULT_USD_ILS = 3.65
 
 # --- Category keyword map ---
 CATEGORY_MAP = {
-    "טכנולוגיה וגאדג'טים": ["usb", "power bank", "speaker", "charger", "cable", "wireless", "mouse", "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
-    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach", "towel", "mat", "flashlight", "jump rope", "bottle", "flask", "tumbler", "drinkware", "cooler"],
-    "בקבוקים, כוסות ושתייה": ["bottle", "mug", "cup", "tumbler", "flask", "drinkware", "thermos", "shaker", "glass", "straw"],
-    "עטים וכלי כתיבה": ["pen", "pencil", "notebook", "notepad", "stylus", "marker", "highlighter", "stationery", "diary"],
-    "תיקים וארנקים": ["bag", "backpack", "tote", "pouch", "wallet", "drawstring", "duffel", "briefcase", "cooler", "luggage"],
+    "טכנולוגיה וגאדג'טים": ["usb", "power bank", "speaker", "charger", "cable", "wireless", "mouse",
+                              "earphone", "headphone", "bluetooth", "smart", "hub", "adapter"],
+    "מחנאות, נופש וספורט": ["camp", "tent", "outdoor", "sport", "yoga", "fitness", "picnic", "beach",
+                              "towel", "mat", "flashlight", "jump rope", "bottle", "flask", "tumbler",
+                              "drinkware", "cooler"],
+    "בקבוקים, כוסות ושתייה": ["bottle", "mug", "cup", "tumbler", "flask", "drinkware", "thermos",
+                                "shaker", "glass", "straw"],
+    "עטים וכלי כתיבה": ["pen", "pencil", "notebook", "notepad", "stylus", "marker", "highlighter",
+                          "stationery", "diary"],
+    "תיקים וארנקים": ["bag", "backpack", "tote", "pouch", "wallet", "drawstring", "duffel",
+                       "briefcase", "cooler", "luggage"],
     "טקסטיל וביגוד": ["shirt", "t-shirt", "cap", "hat", "jacket", "apron", "socks", "apparel", "wear"],
-    "לבית ולמשרד": ["clock", "desk", "organizer", "frame", "lamp", "light", "home", "office", "mouse pad", "lanyard", "keychain"],
-    "עונות (קיץ/חורף)": ["summer", "winter", "umbrella", "fan", "sunglasses", "ice", "warm", "blanket", "beanie", "scarf"],
-    "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet", "organic", "cotton", "biodegradable"]
+    "לבית ולמשרד": ["clock", "desk", "organizer", "frame", "lamp", "light", "home", "office",
+                     "mouse pad", "lanyard", "keychain"],
+    "עונות (קיץ/חורף)": ["summer", "winter", "umbrella", "fan", "sunglasses", "ice", "warm",
+                           "blanket", "beanie", "scarf"],
+    "אקולוגי וקיימות": ["eco", "bamboo", "wheat", "recycled", "cork", "sustainable", "rpet",
+                          "organic", "cotton", "biodegradable"],
 }
 
 # --- Keyword sets for parsing ---
@@ -78,7 +89,11 @@ ITEM_TRIGGER_KEYS = ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'D
 # PAGE SETUP
 # =============================================================================
 
-st.set_page_config(page_title="Next Design - קטלוג חכם", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Next Design - קטלוג חכם",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
@@ -86,9 +101,6 @@ if 'current_page' not in st.session_state:
     st.session_state.current_page = 0
 if 'last_filters' not in st.session_state:
     st.session_state.last_filters = None
-# zoom dialog state: holds (img_b64, title) or None
-if 'zoom_image' not in st.session_state:
-    st.session_state.zoom_image = None
 
 
 # =============================================================================
@@ -97,24 +109,22 @@ if 'zoom_image' not in st.session_state:
 
 st.markdown(f"""
 <style>
-html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *, .stText, p, h1, h2, h3, h4, h5, h6 {{
+/* ===== GLOBAL FONT ===== */
+html, body, [data-testid="stSidebar"], [data-testid="stSidebar"] *,
+.stText, p, h1, h2, h3, h4, h5, h6 {{
     font-family: {FONT_MAIN} !important;
 }}
 .material-icons, .stIcon, svg, i {{
     font-family: 'Material Icons' !important;
 }}
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {{
-    font-family: {FONT_MAIN} !important;
-    font-weight: 700 !important;
-}}
-#MainMenu {{visibility: hidden;}}
-footer {{visibility: hidden;}}
-header {{background-color: transparent !important;}}
-[data-testid="stSidebarHeader"] {{
-    display: none !important;
-}}
+
+/* ===== HIDE STREAMLIT CHROME ===== */
+#MainMenu {{ visibility: hidden; }}
+footer    {{ visibility: hidden; }}
+header    {{ background-color: transparent !important; }}
+[data-testid="stSidebarHeader"] {{ display: none !important; }}
+
+/* ===== SIDEBAR LAYOUT ===== */
 section[data-testid="stSidebar"] .block-container {{
     padding-top: 1.5rem !important;
     padding-bottom: 2rem !important;
@@ -125,7 +135,10 @@ section[data-testid="stSidebar"] .block-container {{
 section[data-testid="stSidebar"] h1,
 section[data-testid="stSidebar"] h2,
 section[data-testid="stSidebar"] h3,
-section[data-testid="stSidebar"] .stMarkdown h2 {{
+section[data-testid="stSidebar"] .stMarkdown h2,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h1,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h3 {{
     font-family: {FONT_MAIN} !important;
     color: {COLOR_PRIMARY} !important;
     font-weight: 900 !important;
@@ -169,6 +182,8 @@ section[data-testid="stSidebar"] .stNumberInput input {{
     direction: ltr !important;
     text-align: left !important;
 }}
+
+/* ===== MULTISELECT / SELECTBOX OVERFLOW FIX ===== */
 .stMultiSelect {{
     position: relative !important;
     width: 100% !important;
@@ -205,10 +220,7 @@ section[data-testid="stSidebar"] .stNumberInput input {{
     word-wrap: break-word !important;
     white-space: normal !important;
 }}
-.stSelectbox div[data-baseweb="select"] {{
-    width: 100% !important;
-    position: relative !important;
-}}
+.stSelectbox div[data-baseweb="select"] {{ width: 100% !important; position: relative !important; }}
 .stSelectbox [data-baseweb="popover"] {{
     position: absolute !important;
     left: 0 !important;
@@ -216,75 +228,102 @@ section[data-testid="stSidebar"] .stNumberInput input {{
     max-width: 280px !important;
     overflow: hidden !important;
 }}
+
+/* ===== SEARCH BAR ===== */
 .stTextInput > div > div > input {{
     font-family: {FONT_MAIN} !important;
-    border-radius: 30px !important; border: 2px solid #eaeaea !important;
-    padding: 15px 20px !important; font-size: 16px !important;
+    border-radius: 30px !important;
+    border: 2px solid #eaeaea !important;
+    padding: 15px 20px !important;
+    font-size: 16px !important;
     box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     text-align: left !important;
     direction: ltr !important;
 }}
 .stTextInput > div > div > input:focus {{
-    border-color: #111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    border-color: #111 !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
 }}
+
+/* ===== PRODUCT CARD CONTAINER ===== */
 div[data-testid="stVerticalBlock"] > div[style*="border"] {{
-    border-radius: 12px !important; border: 1px solid #f0f0f0 !important;
+    border-radius: 12px !important;
+    border: 1px solid #f0f0f0 !important;
     box-shadow: 0 4px 6px rgba(0,0,0,0.03) !important;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    background-color: white; padding: 15px !important; position: relative;
-    direction: ltr !important; text-align: left !important;
+    background-color: white;
+    padding: 15px !important;
+    position: relative;
+    direction: ltr !important;
+    text-align: left !important;
+    /* גובה קבוע + flex column כדי לשמור על יישור אחיד */
+    min-height: {CARD_HEIGHT};
+    display: flex !important;
+    flex-direction: column !important;
 }}
 div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{
-    transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important;
 }}
+
+/* ===== IMAGE HOVER ZOOM ===== */
+/* עוטפים את התמונה ב-.img-zoom-wrap כדי לשלוט ב-overflow */
+.img-zoom-wrap {{
+    width: 100%;
+    height: {CARD_IMAGE_HEIGHT};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;   /* מאפשר לתמונה לצוף מעל */
+    position: relative;
+    z-index: 1;
+    background: #fff;
+    border-radius: 8px;
+    flex-shrink: 0;
+    margin-bottom: 8px;
+}}
+.img-zoom-wrap img {{
+    max-width: 100%;
+    max-height: {CARD_IMAGE_HEIGHT};
+    object-fit: contain;
+    border-radius: 4px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, z-index 0s;
+    position: relative;
+    z-index: 1;
+    cursor: zoom-in;
+}}
+.img-zoom-wrap:hover img {{
+    transform: scale(2.2);
+    z-index: 9999;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.28);
+}}
+
+/* ===== EMAIL BUTTON ===== */
 .email-btn {{
-    display: block; width: 100%; text-align: center; background-color: {COLOR_PRICE};
-    color: white !important; padding: 10px; border-radius: 8px; text-decoration: none;
-    font-weight: bold; margin-top: 20px; transition: background-color 0.3s;
+    display: block;
+    width: 100%;
+    text-align: center;
+    background-color: {COLOR_PRICE};
+    color: white !important;
+    padding: 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 20px;
+    transition: background-color 0.3s;
     font-family: {FONT_MAIN} !important;
 }}
 .email-btn:hover {{ background-color: {COLOR_SUCCESS}; }}
-/* כפתור זום תמונה */
-.zoom-btn {{
-    display: block; width: 100%; text-align: center; background: none;
-    border: 1px dashed #ccc; border-radius: 6px; padding: 2px 0;
-    cursor: pointer; font-size: 11px; color: #999; margin-top: 4px;
-}}
-.zoom-btn:hover {{ border-color: #7C3AED; color: #7C3AED; }}
+
+/* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
 ::-webkit-scrollbar-track {{ background: #f1f1f1; border-radius: 10px; }}
 ::-webkit-scrollbar-thumb {{ background: #ccc; border-radius: 10px; }}
 ::-webkit-scrollbar-thumb:hover {{ background: #999; }}
-html, body {{
-    overflow-x: hidden !important;
-    max-width: 100vw !important;
-}}
-.main, .block-container {{
-    overflow-x: hidden !important;
-    max-width: 100% !important;
-}}
-main {{
-    overflow-x: hidden !important;
-    max-width: 100vw !important;
-}}
-* {{
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-}}
-.sticky-cart {{
-    position: sticky;
-    bottom: 0;
-    z-index: 100;
-    background: #f8fafc;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
-    padding-bottom: 18px;
-    margin-bottom: 0;
-    border-radius: 0 0 16px 16px;
-    transition: box-shadow 0.2s;
-}}
-.sticky-cart .email-btn {{
-    margin-bottom: 0;
-}}
+
+/* ===== PREVENT HORIZONTAL SCROLL ===== */
+html, body {{ overflow-x: hidden !important; max-width: 100vw !important; }}
+.main, .block-container {{ overflow-x: hidden !important; max-width: 100% !important; }}
+main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
+* {{ max-width: 100% !important; box-sizing: border-box !important; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -302,9 +341,7 @@ def format_moq_display(val):
         return "NAN"
     try:
         num = float(val)
-        if num >= 1000:
-            return f"{num/1000:g}K"
-        return f"{num:g}"
+        return f"{num/1000:g}K" if num >= 1000 else f"{num:g}"
     except:
         return "NAN"
 
@@ -323,7 +360,6 @@ def extract_moq(details_list):
             nums = re.findall(r'\d+', clean_d)
             if nums:
                 return float(nums[0])
-
     for detail in details_list:
         d_up = detail.upper()
         if 'FOR' in d_up and ('PCS' in d_up or 'PC' in d_up):
@@ -337,13 +373,26 @@ def extract_moq(details_list):
 
 
 def extract_sourcer(details_list):
-    """Extract sourcer/buyer name from lines containing SOURCER keyword."""
+    """חילוץ שם איש הרכש משורת SOURCER (למשל: 'SOURCER: NANA')."""
     for detail in details_list:
         if 'SOURCER' in detail.upper():
-            # Support formats: "SOURCER: NANA", "SOURCER NANA", "SOURCER:NANA"
             match = re.search(r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]+)', detail, re.IGNORECASE)
             if match:
                 return match.group(1).strip().upper()
+    return None
+
+
+def extract_date(details_list):
+    """חילוץ תאריך משורת DATE (למשל: 'DATE: 2024-01-15' או 'DATE 15/01/2024')."""
+    for detail in details_list:
+        if 'DATE' in detail.upper():
+            # מחפש פורמטים נפוצים: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, DD.MM.YYYY
+            match = re.search(
+                r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
+                detail
+            )
+            if match:
+                return match.group(1).strip()
     return None
 
 
@@ -353,18 +402,17 @@ def extract_categories(details_list):
     for line in details_list:
         if not any(pk in line.upper() for pk in PACKING_KEYWORDS):
             text_to_scan += " " + line.lower()
-
     for cat, keywords in CATEGORY_MAP.items():
         for kw in keywords:
             if re.search(r'\b' + re.escape(kw) + r'\b', text_to_scan):
                 found_categories.add(cat)
-
     if re.search(r'\b(bottle|flask|tumbler|drinkware|thermos|cooler)\b', text_to_scan):
         found_categories.update(['בקבוקים, כוסות ושתייה', 'עונות (קיץ/חורף)', 'מחנאות, נופש וספורט'])
-
-    if re.search(r'\b(soccer|football|כדורגל|basketball|tennis|כדורסל|טניס|volleyball|כדורעף|ping pong|table tennis|פינג פונג)\b', text_to_scan):
+    if re.search(
+        r'\b(soccer|football|כדורגל|basketball|tennis|כדורסל|טניס|volleyball|כדורעף|ping pong|table tennis|פינג פונג)\b',
+        text_to_scan
+    ):
         found_categories.add('מחנאות, נופש וספורט')
-
     return list(found_categories)
 
 
@@ -405,14 +453,10 @@ def extract_materials(full_text):
         materials.append('Stainless Steel')
     if 'plastic' in text_lower or re.search(r'\bpp\b', text_lower) or 'tritan' in text_lower:
         materials.append('Plastic')
-    if 'bamboo' in text_lower:
-        materials.append('Bamboo')
-    if 'glass' in text_lower:
-        materials.append('Glass')
-    if 'silicone' in text_lower:
-        materials.append('Silicone')
-    if 'ceramic' in text_lower:
-        materials.append('Ceramic')
+    if 'bamboo'   in text_lower: materials.append('Bamboo')
+    if 'glass'    in text_lower: materials.append('Glass')
+    if 'silicone' in text_lower: materials.append('Silicone')
+    if 'ceramic'  in text_lower: materials.append('Ceramic')
     return list(set(materials))
 
 
@@ -421,7 +465,7 @@ def transform_he_to_en(text):
         'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g',
         'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n',
         'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u',
-        'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y'
+        'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y',
     }
     return "".join(he_en_map.get(char, char) for char in text.lower())
 
@@ -430,14 +474,13 @@ def normalize_text(text):
     """Normalize text for search: lowercase, keep alphanumeric + Hebrew + spaces."""
     if not isinstance(text, str):
         text = str(text)
-    # שומרים רווחים כדי שנוכל להפריד בין מילים בחיפוש
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF ]', ' ', text).lower()
 
 
 def classify_details(display_list):
     """Split a product's display_list into labeled buckets for rendering."""
     general_info, price_info, packing_info = [], [], []
-    delivery_info, sample_info, other_info = [], [], []
+    delivery_info, sample_info, other_info  = [], [], []
 
     for detail in display_list:
         if contains_chinese(detail):
@@ -462,22 +505,16 @@ def classify_details(display_list):
 
 
 def compute_ils_prices(price_info_lines, usd_ils_rate):
-    """
-    From a list of price strings, extract all USD values and return
-    a list of formatted ILS strings (one per detected price).
-    Returns empty list if rate is 0 or no prices found.
-    """
+    """Convert USD price strings to ILS.  Returns list of '₪ XX.XX' strings."""
     if not usd_ils_rate or usd_ils_rate <= 0:
         return []
     ils_lines = []
     for line in price_info_lines:
-        values = re.findall(r'\d*\.\d+|\d+', line)
-        for v in values:
+        for v in re.findall(r'\d*\.\d+|\d+', line):
             try:
                 usd = float(v)
-                if 0 < usd < 10000:   # סינון ערכים סבירים
-                    ils = usd * usd_ils_rate
-                    ils_lines.append(f"₪ {ils:.2f}")
+                if 0 < usd < 10000:
+                    ils_lines.append(f"₪ {usd * usd_ils_rate:.2f}")
             except:
                 pass
     return ils_lines
@@ -491,7 +528,7 @@ def get_gdrive_service():
     try:
         encoded_key = constants.GCP_SERVICE_ACCOUNT
         decoded_key = base64.b64decode(encoded_key).decode('utf-8')
-        info = json.loads(decoded_key)
+        info  = json.loads(decoded_key)
         creds = service_account.Credentials.from_service_account_info(info)
         return build('drive', 'v3', credentials=creds)
     except Exception as e:
@@ -526,7 +563,7 @@ def load_all_data():
         q=f"'{FOLDER_ID_EXCELS}' in parents",
         fields="files(id, name)",
         supportsAllDrives=True,
-        includeItemsFromAllDrives=True
+        includeItemsFromAllDrives=True,
     ).execute()
 
     all_products = []
@@ -540,7 +577,10 @@ def load_all_data():
             while not done:
                 _, done = downloader.next_chunk()
             fh.seek(0)
-            df_file = pd.read_excel(fh, header=None, engine='xlrd' if item['name'].endswith('.xls') else None)
+            df_file = pd.read_excel(
+                fh, header=None,
+                engine='xlrd' if item['name'].endswith('.xls') else None,
+            )
 
             skip_until = -1
             for idx in range(len(df_file)):
@@ -556,14 +596,11 @@ def load_all_data():
                         if curr_idx >= len(df_file):
                             skip_until = curr_idx
                             break
-
                         b_row = df_file.iloc[curr_idx].dropna().astype(str)
                         line  = re.sub(r'\s+', ' ', " ".join(b_row)).strip()
-
                         if offset > 1 and any(k in line.upper() for k in ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM']):
                             skip_until = curr_idx
                             break
-
                         if line and not any(x in line.upper() for x in SKIP_CONTENT_KEYS):
                             details.append(line)
                             if 'ITEM' in line.upper() and not item_key:
@@ -587,7 +624,8 @@ def load_all_data():
                             'capacity':        extract_capacity(full_text_str),
                             'materials':       extract_materials(full_text_str),
                             'categories':      extract_categories(details),
-                            'sourcer':         extract_sourcer(details),        # ← חדש
+                            'sourcer':         extract_sourcer(details),
+                            'date':            extract_date(details),
                         })
         except:
             continue
@@ -596,7 +634,7 @@ def load_all_data():
         q=f"'{FOLDER_ID_IMAGES}' in parents",
         fields="files(id, name)",
         supportsAllDrives=True,
-        includeItemsFromAllDrives=True
+        includeItemsFromAllDrives=True,
     ).execute()
 
     img_map = {f['name']: f['id'] for f in img_results.get('files', [])}
@@ -610,8 +648,10 @@ def load_all_data():
 def _resolve_image_id(row, i, img_map):
     """Find the best matching image ID for a product row."""
     base_name_clean = normalize_text(row['base_filename'])
-    valid_images = {name: img_id for name, img_id in img_map.items()
-                    if base_name_clean in normalize_text(name)}
+    valid_images = {
+        name: img_id for name, img_id in img_map.items()
+        if base_name_clean in normalize_text(name)
+    }
     if not valid_images:
         return None
     row_target = f"row_{row['row_index']}"
@@ -621,62 +661,68 @@ def _resolve_image_id(row, i, img_map):
     return list(valid_images.values())[i % len(valid_images)]
 
 
+def _build_image_block_html(img_b64):
+    """
+    Build the fixed-height image container with CSS hover-zoom.
+    The .img-zoom-wrap class is defined in the global CSS above.
+    overflow:visible on the wrap + high z-index on hover lets the image
+    float above neighbouring cards without being clipped.
+    """
+    if img_b64:
+        return (
+            f'<div class="img-zoom-wrap">'
+            f'<img src="data:image/jpeg;base64,{img_b64}" alt="product image">'
+            f'</div>'
+        )
+    return (
+        f'<div class="img-zoom-wrap" style="background:#f5f5f5;">'
+        f'<span style="color:#bbb; font-size:12px;">📷 לא נמצאה תמונה</span>'
+        f'</div>'
+    )
+
+
 def _build_tags_html(row):
-    """Build the colored tag strip (MOQ, capacity, categories)."""
+    """Build the colored tag strip: MOQ · capacity · sourcer · categories."""
     moq_val = format_moq_display(row['moq'])
-    if moq_val == "NAN":
-        moq_tag = (
-            f"<span style='background:{COLOR_MOQ_NAN}; color:#fff; padding:3px 8px; "
-            f"border-radius:4px; font-size:11px; font-weight:bold; white-space:nowrap;'>📦 MOQ: NAN</span>"
-        )
-    else:
-        moq_tag = (
-            f"<span style='background:{COLOR_MOQ_OK}; color:#000; padding:3px 8px; "
-            f"border-radius:4px; font-size:11px; font-weight:bold; white-space:nowrap;'>📦 MOQ: {moq_val}</span>"
-        )
+    moq_bg  = COLOR_MOQ_NAN if moq_val == "NAN" else COLOR_MOQ_OK
+    moq_fg  = "#fff"          if moq_val == "NAN" else "#000"
+    moq_tag = (
+        f"<span style='background:{moq_bg}; color:{moq_fg}; padding:3px 8px; "
+        f"border-radius:4px; font-size:11px; font-weight:bold; white-space:nowrap;'>📦 MOQ: {moq_val}</span>"
+    )
 
     capacity_tag = ""
-    if row['capacity']:
+    if row.get('capacity'):
         capacity_tag = (
             f"<span style='background:{COLOR_CAPACITY_BG}; color:{COLOR_CAPACITY_TEXT}; padding:3px 8px; "
             f"border-radius:4px; font-size:11px; white-space:nowrap;'>💧 {row['capacity']}</span>"
         )
 
-    # תגית איש רכש
     sourcer_tag = ""
     if row.get('sourcer'):
         sourcer_tag = (
-            f"<span style='background:#e0e7ff; color:#3730a3; padding:3px 8px; "
-            f"border-radius:4px; font-size:11px; white-space:nowrap;'>👤 {row['sourcer']}</span>"
+            f"<span style='background:{COLOR_SOURCER_BG}; color:{COLOR_SOURCER_TEXT}; padding:3px 8px; "
+            f"border-radius:4px; font-size:11px; font-weight:600; white-space:nowrap;'>👤 {row['sourcer']}</span>"
         )
 
     category_tags = "".join(
         f"<span style='background:{COLOR_TAG_BG}; color:#fff; padding:3px 8px; "
         f"border-radius:4px; font-size:11px; white-space:nowrap;'>🏷️ {cat}</span>"
-        for cat in (row['categories'] or [])
+        for cat in (row.get('categories') or [])
     )
 
     return (
-        f"<div style='display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; direction:ltr;'>"
+        f"<div style='display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; direction:ltr;'>"
         f"{moq_tag}{capacity_tag}{sourcer_tag}{category_tags}</div>"
     )
 
 
-# --- Image zoom dialog ---
-@st.dialog("🔍 תצוגה מוגדלת")
-def _show_zoom_dialog(img_b64, title):
-    """Dialog that shows a full-size zoomable image via st.image."""
-    st.caption(title)
-    img_bytes = base64.b64decode(img_b64)
-    st.image(img_bytes, use_container_width=True)
-
-
 def render_product_card(row, i, img_map, usd_ils_rate):
-    """Render a single product card inside a Streamlit container."""
+    """Render a single product card — fixed height, flexbox column layout."""
     unique_item_id = f"{row['base_filename']}_{row['row_index']}"
 
     with st.container(border=True):
-        # --- Checkbox ---
+        # --- Checkbox (בחירה לשליחה) ---
         is_selected = unique_item_id in st.session_state.selected_items
         if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
             if not is_selected:
@@ -687,75 +733,89 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 del st.session_state.selected_items[unique_item_id]
                 st.rerun()
 
-        # --- Image ---
+        # --- תמונה עם Hover Zoom (HTML בלבד — גובה קבוע, לא מדחף תוכן) ---
         img_id  = _resolve_image_id(row, i, img_map)
         img_b64 = get_image_base64(img_id) if img_id else None
+        img_block = _build_image_block_html(img_b64)
 
-        if img_b64:
-            img_bytes = base64.b64decode(img_b64)
-            st.image(img_bytes, use_container_width=True)
-            # כפתור זום קטן מתחת לתמונה
-            if st.button("🔍 הגדל תמונה", key=f"zoom_{unique_item_id}", use_container_width=True):
-                _show_zoom_dialog(img_b64, row['item_key'])
-        else:
-            st.markdown(
-                f'<div style="height:{CARD_IMAGE_HEIGHT}; display:flex; justify-content:center; '
-                f'align-items:center; background:#f9f9f9; border-radius:8px; color:#aaa; font-size:12px;">'
-                f'📷 לא נמצאה תמונה</div>',
-                unsafe_allow_html=True
-            )
-
-        # --- Tags ---
+        # --- תגיות ---
         tags_html = _build_tags_html(row)
-        st.markdown(tags_html, unsafe_allow_html=True)
 
-        # --- Details ---
-        general_info, price_info, packing_info, delivery_info, sample_info, other_info = classify_details(row['display_list'])
+        # --- פרטי מוצר ---
+        general_info, price_info, packing_info, delivery_info, sample_info, other_info = \
+            classify_details(row['display_list'])
 
-        details_html = '<div style="flex-grow:1; overflow-y:auto; text-align:left; line-height:1.5; padding-right:5px; direction:ltr;">'
-
+        details_html = (
+            '<div style="flex-grow:1; overflow-y:auto; text-align:left; '
+            'line-height:1.6; padding-right:4px; direction:ltr; font-size:13px;">'
+        )
         for info in general_info:
-            details_html += f"<div style='font-weight:800; font-size:14px; color:{COLOR_GENERAL}; margin-bottom:5px;'>{info}</div>"
+            details_html += (
+                f"<div style='font-weight:800; font-size:14px; color:{COLOR_GENERAL}; "
+                f"margin-bottom:5px;'>{info}</div>"
+            )
         for info in sample_info:
-            details_html += f"<div style='font-size:13px; color:{COLOR_SAMPLE}; font-weight:700; margin-bottom:3px;'>⏱️ {info}</div>"
+            details_html += (
+                f"<div style='color:{COLOR_SAMPLE}; font-weight:700; margin-bottom:3px;'>⏱️ {info}</div>"
+            )
         for info in delivery_info:
-            details_html += f"<div style='font-size:13px; color:{COLOR_DELIVERY}; font-weight:600; margin-bottom:2px;'>🚚 {info}</div>"
+            details_html += (
+                f"<div style='color:{COLOR_DELIVERY}; font-weight:600; margin-bottom:2px;'>🚚 {info}</div>"
+            )
         for info in packing_info:
-            details_html += f"<div style='font-size:13px; color:{COLOR_PACKING}; margin-bottom:2px;'>📦 {info}</div>"
+            details_html += (
+                f"<div style='color:{COLOR_PACKING}; margin-bottom:2px;'>📦 {info}</div>"
+            )
         for info in other_info:
-            details_html += f"<div style='font-size:12px; color:{COLOR_OTHER};'>• {info}</div>"
-
+            details_html += f"<div style='color:{COLOR_OTHER};'>• {info}</div>"
         details_html += '</div>'
 
-        # --- Price footer ---
-        price_footer = (
-            f'<div style="flex-shrink:0; margin-top:8px; border-top:1px solid #eee; '
-            f'padding-top:8px; text-align:left; direction:ltr;">'
-        )
+        # --- Footer: מחיר USD + ILS + תאריך + מקור ---
+        ils_values = compute_ils_prices(price_info, usd_ils_rate)
+        ils_html   = ""
+        if ils_values:
+            ils_joined = "  |  ".join(ils_values)
+            ils_html = (
+                f"<div style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px; "
+                f"margin-bottom:3px; line-height:1.3;'>🪙 {ils_joined}</div>"
+            )
 
-        # מחיר USD
+        price_html = ""
         for info in price_info:
-            price_footer += (
+            price_html += (
                 f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:15px; "
                 f"margin-bottom:2px; line-height:1.2;'>💰 {info}</div>"
             )
 
-        # מחיר ILS — מחושב ומוצג בסגול
-        ils_values = compute_ils_prices(price_info, usd_ils_rate)
-        if ils_values:
-            ils_joined = "  |  ".join(ils_values)
-            price_footer += (
-                f"<div style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px; "
-                f"margin-bottom:4px; line-height:1.3;'>🪙 {ils_joined}</div>"
-            )
+        # תאריך ומקור קובץ — שורה תחתונה
+        meta_parts = []
+        if row.get('date'):
+            meta_parts.append(f"📅 {row['date']}")
+        meta_parts.append(f"📂 {row['file_source']}")
+        meta_html = (
+            f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:4px; "
+            f"white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>"
+            f"{'  ·  '.join(meta_parts)}</div>"
+        )
 
-        price_footer += (
-            f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:4px; white-space:nowrap; "
-            f"overflow:hidden; text-overflow:ellipsis;'>📂 {row['file_source']}</div>"
+        footer_html = (
+            '<div style="flex-shrink:0; margin-top:8px; border-top:1px solid #eee; '
+            'padding-top:8px; text-align:left; direction:ltr;">'
+            f'{price_html}{ils_html}{meta_html}'
             '</div>'
         )
 
-        st.markdown(details_html + price_footer, unsafe_allow_html=True)
+        # --- הרכבת הכרטיסייה כולה ב-HTML אחד ---
+        card_html = (
+            f'<div style="display:flex; flex-direction:column; '
+            f'min-height:calc({CARD_HEIGHT} - 60px); direction:ltr; text-align:left;">'
+            f'{img_block}'
+            f'<div style="flex-shrink:0; margin-bottom:4px;">{tags_html}</div>'
+            f'{details_html}'
+            f'{footer_html}'
+            f'</div>'
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
 
 
 # =============================================================================
@@ -763,7 +823,7 @@ def render_product_card(row, i, img_map, usd_ils_rate):
 # =============================================================================
 
 def _render_cart_section():
-    """Render the selected-items cart inside the sidebar."""
+    """Cart section — selected products + email button."""
     st.header("🛒 מוצרים לשליחה")
 
     if not st.session_state.selected_items:
@@ -776,7 +836,11 @@ def _render_cart_section():
     for item_data in st.session_state.selected_items.values():
         email_body += f"--- {item_data['item_key']} ---\n"
         for detail in item_data['display_list']:
-            if "Unnamed" not in detail and not contains_chinese(detail) and "MOQ" not in detail.upper():
+            if (
+                "Unnamed" not in detail
+                and not contains_chinese(detail)
+                and "MOQ" not in detail.upper()
+            ):
                 email_body += f"• {detail}\n"
         email_body += f"מקור: {item_data['file_source']}\n\n"
     email_body += "בברכה,\nNext Design"
@@ -784,80 +848,72 @@ def _render_cart_section():
     encoded_subject = urllib.parse.quote("Next Design - פרטי מוצרים")
     encoded_body    = urllib.parse.quote(email_body)
     st.markdown(
-        f'<a href="mailto:?subject={encoded_subject}&body={encoded_body}" class="email-btn" target="_blank">'
-        f'✉️ שלח במייל עכשיו</a>',
-        unsafe_allow_html=True
+        f'<a href="mailto:?subject={encoded_subject}&body={encoded_body}" '
+        f'class="email-btn" target="_blank">✉️ שלח במייל עכשיו</a>',
+        unsafe_allow_html=True,
     )
-
     if st.button("🗑️ נקה רשימה", use_container_width=True):
         st.session_state.selected_items = {}
 
 
 def render_sidebar(df):
     """
-    Render the full sidebar (filters, currency, cart, refresh).
-    Returns a dict of active filter values + usd_ils_rate.
+    Sidebar order (מלמעלה למטה):
+      1. עגלת מוצרים לשליחה  ← ראש הסיידבר, נראה ראשון
+      2. סינון חכם
+      3. כפתור רענון
+    Returns dict of active filter values + usd_ils_rate.
     """
     with st.sidebar:
+
+        # ===== 1. עגלה — ראשונה! =====
+        _render_cart_section()
+        st.divider()
+
+        # ===== 2. סינון חכם =====
         st.header("⚙️ סינון חכם")
 
-        # --- קטגוריות ---
         selected_categories = st.multiselect(
             "קטגוריה (Category)", list(CATEGORY_MAP.keys()), placeholder="בחר קטגוריות..."
         )
-
-        # --- מחיר ---
         price_min, price_max = st.slider(
             "טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0, value=(0.0, 200.0), step=0.1
         )
-
-        # --- שער דולר ---
         usd_ils_rate = st.number_input(
             "שער דולר (USD/ILS ₪)",
             min_value=0.0,
             value=DEFAULT_USD_ILS,
             step=0.01,
             format="%.2f",
-            help="המחיר בשקלים בכרטיסיות יחושב לפי שער זה"
+            help="המחיר בשקלים בכרטיסיות יחושב לפי שער זה",
         )
-
-        # --- MOQ ---
         max_moq = st.number_input(
-            "MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None, placeholder="ללא הגבלה...", step=500
+            "MOQ מקסימלי (כמות מינימלית)", min_value=0, value=None,
+            placeholder="ללא הגבלה...", step=500,
         )
-
-        # --- זמן אספקה ---
         max_delivery = st.slider("זמן אספקה מקסימלי (ימים)", min_value=5, max_value=90, value=90, step=5)
 
-        # --- חומר ונפח ---
         available_capacities = sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
         selected_materials   = st.multiselect(
             "חומר (Material)",
             ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"],
-            placeholder="בחר חומרים..."
+            placeholder="בחר חומרים...",
         )
-        selected_capacities  = st.multiselect(
+        selected_capacities = st.multiselect(
             "נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)..."
         )
 
-        # --- ספקים (קבצי מקור) ---
-        available_sources = sorted(df['file_source'].dropna().unique().tolist()) if not df.empty else []
-        selected_sources  = st.multiselect(
-            "ספק / קובץ מקור", available_sources, placeholder="בחר ספקים..."
-        )
-
-        # --- אנשי רכש (sourcers) ---
+        # סינון איש רכש
         available_sourcers = sorted([
             s for s in df['sourcer'].dropna().unique().tolist() if s
         ]) if not df.empty else []
-        selected_sourcers  = st.multiselect(
+        selected_sourcers = st.multiselect(
             "איש רכש (Sourcer)", available_sourcers, placeholder="בחר איש רכש..."
         )
 
         st.divider()
-        _render_cart_section()
-        st.divider()
 
+        # ===== 3. רענון =====
         if st.button("🔄 רענון נתונים", use_container_width=True):
             st.cache_data.clear()
             st.success("הנתונים רועננו בהצלחה!")
@@ -874,7 +930,6 @@ def render_sidebar(df):
         max_delivery=max_delivery,
         selected_materials=selected_materials,
         selected_capacities=selected_capacities,
-        selected_sources=selected_sources,
         selected_sourcers=selected_sourcers,
     )
 
@@ -884,15 +939,18 @@ def render_sidebar(df):
 # =============================================================================
 
 def render_page_header():
-    """Render the top branding header."""
     st.markdown("""
         <div style="text-align:center; margin-bottom:40px; margin-top:10px; direction:rtl;">
             <a href="https://nextd.wallak.co.il/" target="_blank" style="text-decoration:none;">
-                <h1 style="font-family:'Arial',sans-serif; font-weight:900; letter-spacing:1px; color:#000; font-size:46px; margin-bottom:0;">
-                    <span style="background-color:#000; color:#fff; padding:0 12px; border-radius:6px; margin-right:5px;">NEXT</span>DESIGN
+                <h1 style="font-family:'Arial',sans-serif; font-weight:900; letter-spacing:1px;
+                           color:#000; font-size:46px; margin-bottom:0;">
+                    <span style="background-color:#000; color:#fff; padding:0 12px;
+                                 border-radius:6px; margin-right:5px;">NEXT</span>DESIGN
                 </h1>
             </a>
-            <h3 style="font-family:'Arial',sans-serif; color:#666; font-weight:500; margin-top:5px;">קטלוג הצעות מחיר ביבוא 🔎</h3>
+            <h3 style="font-family:'Arial',sans-serif; color:#666; font-weight:500; margin-top:5px;">
+                קטלוג הצעות מחיר ביבוא 🔎
+            </h3>
         </div>
     """, unsafe_allow_html=True)
 
@@ -902,7 +960,6 @@ def render_page_header():
 # =============================================================================
 
 def render_pagination(total_products):
-    """Render prev/next pagination controls and update session state."""
     st.markdown("<br>", unsafe_allow_html=True)
     total_pages  = (total_products + PRODUCTS_PER_PAGE - 1) // PRODUCTS_PER_PAGE
     col_prev, col_info, col_next = st.columns([1, 2, 1])
@@ -917,7 +974,7 @@ def render_pagination(total_products):
         st.markdown(
             f"<div style='text-align:center; font-weight:bold;'>"
             f"עמוד {st.session_state.current_page + 1} מתוך {total_pages}</div>",
-            unsafe_allow_html=True
+            unsafe_allow_html=True,
         )
 
     with col_next:
@@ -935,11 +992,10 @@ def apply_filters(df, search_input, filters):
     """Return a filtered and deduplicated DataFrame based on all active filters."""
     results = df.copy()
 
-    # --- חיפוש חופשי מתקדם: AND על מילים ---
+    # חיפוש חופשי מתקדם — AND על כל מילה
     query = search_input.strip()
     if query and query.upper() != "ALL":
-        raw_words = query.split()
-        for word in raw_words:
+        for word in query.split():
             norm_word  = normalize_text(word)
             trans_word = normalize_text(transform_he_to_en(word))
             results = results[
@@ -973,11 +1029,6 @@ def apply_filters(df, search_input, filters):
     if filters['selected_capacities']:
         results = results[results['capacity'].isin(filters['selected_capacities'])]
 
-    # --- סינון ספק ---
-    if filters['selected_sources']:
-        results = results[results['file_source'].isin(filters['selected_sources'])]
-
-    # --- סינון איש רכש ---
     if filters['selected_sourcers']:
         results = results[results['sourcer'].isin(filters['selected_sourcers'])]
 
@@ -991,31 +1042,29 @@ def apply_filters(df, search_input, filters):
 def main():
     render_page_header()
 
-    # טעינת נתונים פעם אחת בלבד
+    # טעינת נתונים פעם אחת בלבד לכל ה-session
     if 'df' not in st.session_state or 'img_map' not in st.session_state:
         st.session_state.df, st.session_state.img_map = load_all_data()
 
     df      = st.session_state.df
     img_map = st.session_state.img_map
 
-    # סיידבר — מחזיר dict של כל ערכי הסינון
     filters = render_sidebar(df)
 
-    # שורת חיפוש
-    search_input = st.text_input("", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)...")
+    search_input = st.text_input(
+        "", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)..."
+    )
 
     should_show = (
-        bool(search_input.strip()) or
-        bool(filters['selected_categories']) or
-        bool(filters['selected_materials']) or
-        bool(filters['selected_capacities']) or
-        bool(filters['selected_sources']) or
-        bool(filters['selected_sourcers'])
+        bool(search_input.strip())
+        or bool(filters['selected_categories'])
+        or bool(filters['selected_materials'])
+        or bool(filters['selected_capacities'])
+        or bool(filters['selected_sourcers'])
     )
     if df.empty or not should_show:
         return
 
-    # סינון
     results = apply_filters(df, search_input, filters)
 
     if results.empty:
@@ -1030,20 +1079,17 @@ def main():
         filters['max_moq'], filters['max_delivery'],
         tuple(filters['selected_materials']),
         tuple(filters['selected_capacities']),
-        tuple(filters['selected_sources']),
         tuple(filters['selected_sourcers']),
     )
     if st.session_state.last_filters != current_filters:
         st.session_state.current_page = 0
         st.session_state.last_filters = current_filters
 
-    # Pagination
     total_products = len(results)
     start          = st.session_state.current_page * PRODUCTS_PER_PAGE
     end            = min(start + PRODUCTS_PER_PAGE, total_products)
     page_results   = results.iloc[start:end]
 
-    # גריד מוצרים
     st.write("<br>", unsafe_allow_html=True)
     cols = st.columns(COLUMNS_PER_ROW)
     for i, (_, row) in enumerate(page_results.iterrows()):
