@@ -153,9 +153,13 @@ html, body {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 * {{ max-width: 100% !important; box-sizing: border-box !important; }}
 </style>
+""", unsafe_allow_html=True)
+
+# JS zoom overlay — קריאה נפרדת (לא f-string) כדי שהסוגריים לא יתפרשו
+st.markdown("""
 <div id="img-zoom-overlay"><img src="" alt="zoom"/></div>
 <script>
-(function() {{
+(function() {
   var overlay = document.getElementById('img-zoom-overlay');
   var overlayImg = overlay ? overlay.querySelector('img') : null;
   if (!overlay || !overlayImg) return;
@@ -163,48 +167,48 @@ main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
   var MARGIN = 16;
   var hideTimer = null;
 
-  function showOverlay(src, rect) {{
+  function showOverlay(src, rect) {
     clearTimeout(hideTimer);
     overlayImg.src = src;
     var left = rect.right + MARGIN;
     var top  = rect.top + (rect.height / 2) - (ZOOM_SIZE / 2);
-    if (left + ZOOM_SIZE > window.innerWidth - MARGIN) {{
+    if (left + ZOOM_SIZE > window.innerWidth - MARGIN) {
       left = rect.left - ZOOM_SIZE - MARGIN;
-    }}
+    }
     if (left < MARGIN) left = MARGIN;
     if (top < MARGIN) top = MARGIN;
-    if (top + ZOOM_SIZE > window.innerHeight - MARGIN) {{
+    if (top + ZOOM_SIZE > window.innerHeight - MARGIN) {
       top = window.innerHeight - ZOOM_SIZE - MARGIN;
-    }}
+    }
     overlay.style.width   = ZOOM_SIZE + 'px';
     overlay.style.height  = ZOOM_SIZE + 'px';
     overlay.style.left    = left + 'px';
     overlay.style.top     = top  + 'px';
     overlay.style.display = 'block';
-    requestAnimationFrame(function() {{ overlay.classList.add('visible'); }});
-  }}
+    requestAnimationFrame(function() { overlay.classList.add('visible'); });
+  }
 
-  function hideOverlay() {{
+  function hideOverlay() {
     overlay.classList.remove('visible');
-    hideTimer = setTimeout(function() {{ overlay.style.display = 'none'; }}, 180);
-  }}
+    hideTimer = setTimeout(function() { overlay.style.display = 'none'; }, 180);
+  }
 
-  document.addEventListener('mouseover', function(e) {{
+  document.addEventListener('mouseover', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img || !img.src || img.src.startsWith('data:,')) return;
     var rect = img.getBoundingClientRect();
     showOverlay(img.src, rect);
-  }});
+  });
 
-  document.addEventListener('mouseout', function(e) {{
+  document.addEventListener('mouseout', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img) return;
     if (e.relatedTarget && (e.relatedTarget === overlay || overlay.contains(e.relatedTarget))) return;
     hideOverlay();
-  }});
+  });
 
   overlay.addEventListener('mouseleave', hideOverlay);
-}})();
+})();
 </script>
 """, unsafe_allow_html=True)
 
