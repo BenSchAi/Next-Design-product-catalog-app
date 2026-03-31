@@ -226,7 +226,7 @@ def extract_date(details_list):
     """
     חילוץ תאריך משורת DATE.
     תומך בפורמטים:
-      - '25th,mar,2026'  → '25 mar 2026'
+      - '25th,mar,2026'  -> '25 mar 2026'
       - 'DATE: 2024-01-15'
       - 'DATE 15/01/2024'
       - 'DATE: Jan 15, 2024'
@@ -486,7 +486,7 @@ def load_all_data():
                             'base_filename':   item['name'].rsplit('.', 1)[0],
                             'row_index':       idx,
                             'min_price':       min_p,
-                            'price_display':   extract_price_display(details),  # ← תצוגת מחיר נקייה
+                            'price_display':   extract_price_display(details),
                             'moq':             extract_moq(details),
                             'delivery_days':   extract_delivery_days(details),
                             'capacity':        extract_capacity(full_text_str),
@@ -530,7 +530,7 @@ def _resolve_image_id(row, i, img_map):
 
 def _build_image_block_html(img_b64, date_str):
     """
-    Fixed-height image box (overflow:hidden).
+    Fixed-height image box.
     תאריך מוצג כ-badge בפינה העליונה-שמאלית של התמונה.
     """
     date_badge = ""
@@ -545,6 +545,32 @@ def _build_image_block_html(img_b64, date_str):
         img_tag = '<span style="color:#ccc; font-size:11px;">📷 לא נמצאה תמונה</span>'
 
     return f'<div class="img-box">{date_badge}{img_tag}</div>'
+
+
+def _build_meta_header_html(row):
+    """
+    FIX 1: שורת מטא קטנה ואפורה מתחת לתיבת הסימון — תאריך + איש רכש.
+    מוצגת רק אם לפחות אחד מהם קיים.
+    """
+    parts = []
+    date_str    = row.get('date')
+    sourcer_str = row.get('sourcer')
+
+    if date_str:
+        parts.append(f"📅 {date_str}")
+    if sourcer_str:
+        parts.append(f"👤 {sourcer_str}")
+
+    if not parts:
+        return ""
+
+    content = "  &nbsp;·&nbsp;  ".join(parts)
+    return (
+        f"<div style='font-size:10px; color:#888; font-family:Arial,sans-serif; "
+        f"margin-bottom:4px; margin-top:-2px; white-space:nowrap; "
+        f"overflow:hidden; text-overflow:ellipsis; direction:ltr; text-align:left;'>"
+        f"{content}</div>"
+    )
 
 
 def _build_tags_html(row):
@@ -589,32 +615,37 @@ def _build_tags_html(row):
 
 def _build_price_footer_html(row, usd_ils_rate):
     """
-    בונה את footer המחיר:
-    - שורת USD: מציגה את price_display (הטקסט המקורי מהאקסל)
-    - שורת ILS: מחשבת min_price * rate ומציגה ערך אחד בלבד
-    - מטא: תאריך + שם קובץ
+    FIX 2 + FIX 3:
+    - white-space:normal על שורת המחיר (לא נחתכת יותר)
+    - תצוגה: 💰 <price_display> בירוק | ₪ X.XX בסגול (על אותה שורה)
+    - חישוב ILS מ-min_price בלבד (מספר נקי, לא מהטקסט)
+    - מקור קובץ
     """
-    price_usd_html = ""
-    price_ils_html = ""
-
-    price_display = row.get('price_display')
     min_price     = row.get('min_price')
+    price_display = row.get('price_display')
+
+    price_html = ""
 
     if price_display:
-        price_usd_html = (
-            f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:15px; "
-            f"margin-bottom:3px; line-height:1.3; white-space:nowrap; overflow:hidden; "
-            f"text-overflow:ellipsis;'>💰 {price_display}</div>"
+        # FIX 3: ILS מחושב אך ורק מ-min_price (float נקי)
+        ils_part = ""
+        if min_price and usd_ils_rate and usd_ils_rate > 0:
+            ils_val  = min_price * usd_ils_rate
+            ils_part = (
+                f"&nbsp;<span style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px;'>"
+                f"| ₪&nbsp;{ils_val:.2f}</span>"
+            )
+
+        # FIX 2: white-space:normal — שורת המחיר לעולם לא נחתכת
+        price_html = (
+            f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:14px; "
+            f"margin-bottom:3px; line-height:1.5; "
+            f"white-space:normal; overflow:visible; word-break:break-word;'>"
+            f"💰 {price_display} {ils_part}"
+            f"</div>"
         )
 
-    if min_price and usd_ils_rate and usd_ils_rate > 0:
-        ils_val = min_price * usd_ils_rate
-        price_ils_html = (
-            f"<div style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px; "
-            f"margin-bottom:3px; line-height:1.3;'>🪙 ₪ {ils_val:.2f}</div>"
-        )
-
-    # מקור קובץ בלבד (תאריך כבר ב-badge על התמונה)
+    # מקור קובץ
     meta_html = (
         f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:3px; "
         f"white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>"
@@ -623,7 +654,7 @@ def _build_price_footer_html(row, usd_ils_rate):
 
     return (
         f'<div class="card-footer">'
-        f'{price_usd_html}{price_ils_html}{meta_html}'
+        f'{price_html}{meta_html}'
         f'</div>'
     )
 
@@ -644,7 +675,10 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 del st.session_state.selected_items[unique_item_id]
                 st.rerun()
 
-        # ── Image (fixed 220px, overflow:hidden, date badge inside) ──
+        # FIX 1: שורת מטא — תאריך + איש רכש מתחת לצ'קבוקס
+        meta_header = _build_meta_header_html(row)
+
+        # ── Image ──────────────────────────────────────────────────
         img_id  = _resolve_image_id(row, i, img_map)
         img_b64 = get_image_base64(img_id) if img_id else None
         img_block = _build_image_block_html(img_b64, row.get('date'))
@@ -690,13 +724,12 @@ def render_product_card(row, i, img_map, usd_ils_rate):
         # ── Price footer ──────────────────────────────────────────
         footer_html = _build_price_footer_html(row, usd_ils_rate)
 
-        # ── Assemble full card in one markdown call ────────────────
-        # גובה קבוע מפורש בפיקסלים על ה-wrapper הפנימי — לא מסתמך על height:100%
-        # שלא תמיד עובד בתוך nested Streamlit containers
+        # ── Assemble full card ────────────────────────────────────
         card_html = (
             f'<div style="display:flex; flex-direction:column; '
             f'height:610px; max-height:610px; overflow:hidden; '
             f'direction:ltr; text-align:left;">'
+            f'{meta_header}'
             f'{img_block}'
             f'<div style="flex-shrink:0;">{tags_html}</div>'
             f'{details_html}'
@@ -757,14 +790,14 @@ def _render_cart_section():
 def render_sidebar(df):
     """
     סדר הסיידבר:
-      1. עגלת מוצרים (ראשון — ללא גלילה)
+      1. עגלת מוצרים
       2. סינון חכם
       3. רענון
     מחזיר dict עם כל ערכי הסינון.
     """
     with st.sidebar:
 
-        # 1. עגלה — ראשונה
+        # 1. עגלה
         _render_cart_section()
         st.divider()
 
@@ -813,7 +846,7 @@ def render_sidebar(df):
             "נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)..."
         )
 
-        # סינון איש רכש — שמות נשאבים דינמית מהנתונים
+        # FIX 1: סינון איש רכש — שמות דינמיים מהנתונים
         available_sourcers = (
             sorted([s for s in df['sourcer'].dropna().unique().tolist() if s])
             if not df.empty else []
@@ -903,7 +936,6 @@ def apply_filters(df, search_input, filters):
     """Return filtered + deduplicated DataFrame."""
     results = df.copy()
 
-    # חיפוש חופשי מתקדם — AND על כל מילה
     query = search_input.strip()
     if query and query.upper() != "ALL":
         for word in query.split():
