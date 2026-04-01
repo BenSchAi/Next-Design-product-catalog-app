@@ -483,11 +483,31 @@ def get_image_base64(file_id):
         return None
 
 
+def _parse_date_from_string(s):
+    """ניסיון לחלץ תאריך מכל מחרוזת — מחזיר string או None."""
+    m = re.search(
+        r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
+        s, re.IGNORECASE
+    )
+    if m:
+        return f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
+    m = re.search(r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})', s, re.IGNORECASE)
+    if m:
+        return f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
+    m = re.search(
+        r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
+        s
+    )
+    if m:
+        return m.group(1).strip()
+    return None
+
+
 def extract_file_header(df_file):
     """
-    סורק את 15 השורות הראשונות ו-10 העמודות הראשונות של הקובץ
-    ומחלץ SOURCER ו-DATE ברמת הקובץ כולו.
-    תומך בפורמטים: 'SOURCER:daisy', 'SOURCER: DAISY', 'DATE:12th,mar,2026' וכו'.
+    סורק את 15 השורות הראשונות ו-10 העמודות הראשונות של הקובץ.
+    חיפוש case-insensitive עם partial match — תומך ב:
+      'SOURCER:daisy', 'sourcer : Hellen', 'Date:12th,mar,2026', 'date : 2026-03-12' וכו'.
     מחזיר (sourcer_str, date_str) — כל אחד יכול להיות None.
     """
     sourcer = None
@@ -504,67 +524,40 @@ def extract_file_header(df_file):
             cell_str = str(cell).strip()
             cell_up  = cell_str.upper()
 
-            # --- SOURCER ---
-            if sourcer is None and 'SOURCER' in cell_up:
-                # פורמט בתא אחד: "SOURCER:daisy" או "SOURCER: Daisy" או "SOURCER Daisy"
-                m = re.search(r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})', cell_str, re.IGNORECASE)
+            # --- SOURCER: partial + case-insensitive ---
+            if sourcer is None and re.search(r'SOURCER\s*:?', cell_up):
+                m = re.search(
+                    r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
+                    cell_str, re.IGNORECASE
+                )
                 if m:
                     name = m.group(1).strip()
                     if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
                         sourcer = name.capitalize()
                 else:
-                    # אולי השם בתא הסמוך (עמודה הבאה)
-                    if c + 1 < max_cols:
-                        next_cell = df_file.iloc[r, c + 1]
-                        if not pd.isna(next_cell):
-                            name = str(next_cell).strip()
-                            if re.match(r'^[A-Za-z\u0590-\u05FF]{2,}$', name):
-                                sourcer = name.capitalize()
+                    # שם בתא סמוך (עד 2 עמודות ימינה)
+                    for dc in range(1, 3):
+                        if c + dc < max_cols:
+                            nc = df_file.iloc[r, c + dc]
+                            if not pd.isna(nc):
+                                name = str(nc).strip()
+                                if re.match(r'^[A-Za-z\u0590-\u05FF]{2,}$', name):
+                                    if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
+                                        sourcer = name.capitalize()
+                                        break
 
-            # --- DATE ---
-            if date is None and 'DATE' in cell_up:
-                # פורמט: 25th,mar,2026
-                m = re.search(
-                    r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
-                    cell_str, re.IGNORECASE
-                )
-                if m:
-                    date = f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
-                else:
-                    # פורמט: Jan 15, 2024 או 15 Jan 2024
-                    m = re.search(
-                        r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})',
-                        cell_str, re.IGNORECASE
-                    )
-                    if m:
-                        date = f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
-                    else:
-                        # פורמטים מספריים
-                        m = re.search(
-                            r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
-                            cell_str
-                        )
-                        if m:
-                            date = m.group(1).strip()
-                        else:
-                            # תאריך בתא הסמוך
-                            if c + 1 < max_cols:
-                                next_cell = df_file.iloc[r, c + 1]
-                                if not pd.isna(next_cell):
-                                    nc_str = str(next_cell).strip()
-                                    m2 = re.search(
-                                        r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
-                                        nc_str, re.IGNORECASE
-                                    )
-                                    if m2:
-                                        date = f"{m2.group(1)} {m2.group(2).capitalize()} {m2.group(3)}"
-                                    else:
-                                        m2 = re.search(
-                                            r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
-                                            nc_str
-                                        )
-                                        if m2:
-                                            date = m2.group(1).strip()
+            # --- DATE: partial + case-insensitive ---
+            if date is None and re.search(r'\bDATE\s*:?', cell_up):
+                date = _parse_date_from_string(cell_str)
+                if not date:
+                    # תאריך בתאים הסמוכים (עד 2 עמודות ימינה)
+                    for dc in range(1, 3):
+                        if c + dc < max_cols:
+                            nc = df_file.iloc[r, c + dc]
+                            if not pd.isna(nc):
+                                date = _parse_date_from_string(str(nc).strip())
+                                if date:
+                                    break
 
             if sourcer and date:
                 return sourcer, date
@@ -707,22 +700,19 @@ def _build_image_block_html(img_b64, date_str):
 
 def _build_meta_header_html(row):
     """
-    FIX 1: שורת מטא קטנה ואפורה מתחת לתיבת הסימון — תאריך + איש רכש.
-    מוצגת רק אם לפחות אחד מהם קיים.
+    שורת מטא בראש הכרטיסייה (מעל התמונה): [Date] | [Sourcer]
+    - אם אין תאריך — מציג 'No Date'
+    - אם אין sourcer — לא מציג את ה-| בכלל
+    - תמיד מוצגת (לא נעלמת)
     """
-    parts = []
-    date_str    = row.get('date')
+    date_str    = row.get('date') or 'No Date'
     sourcer_str = row.get('sourcer')
 
-    if date_str:
-        parts.append(f"📅 {date_str}")
     if sourcer_str:
-        parts.append(f"👤 {sourcer_str}")
+        content = f"📅 {date_str} &nbsp;|&nbsp; 👤 {sourcer_str}"
+    else:
+        content = f"📅 {date_str}"
 
-    if not parts:
-        return ""
-
-    content = "  &nbsp;·&nbsp;  ".join(parts)
     return (
         f"<div style='font-size:10px; color:#888; font-family:Arial,sans-serif; "
         f"margin-bottom:4px; margin-top:-2px; white-space:nowrap; "
@@ -750,13 +740,7 @@ def _build_tags_html(row):
             f"💧 {row['capacity']}</span>"
         )
 
-    sourcer_tag = ""
-    if row.get('sourcer'):
-        sourcer_tag = (
-            f"<span style='background:{COLOR_SOURCER_BG}; color:{COLOR_SOURCER_TEXT}; "
-            f"padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600; white-space:nowrap;'>"
-            f"👤 {row['sourcer']}</span>"
-        )
+    # sourcer tag הוסר — השם מוצג בשורת המטא בלבד (מעל התמונה)
 
     category_tags = "".join(
         f"<span style='background:{COLOR_TAG_BG}; color:#fff; padding:3px 8px; "
@@ -767,7 +751,7 @@ def _build_tags_html(row):
     return (
         f"<div style='display:flex; flex-wrap:wrap; gap:4px; "
         f"margin-bottom:6px; direction:ltr;'>"
-        f"{moq_tag}{capacity_tag}{sourcer_tag}{category_tags}</div>"
+        f"{moq_tag}{capacity_tag}{category_tags}</div>"
     )
 
 
