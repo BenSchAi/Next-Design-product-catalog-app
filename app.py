@@ -483,37 +483,41 @@ def get_image_base64(file_id):
         return None
 
 
-def _parse_date_from_string(s):
-    """ניסיון לחלץ תאריך מכל מחרוזת — מחזיר string או None."""
-    m = re.search(
-        r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
-        s, re.IGNORECASE
-    )
-    if m:
-        return f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
-    m = re.search(r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})', s, re.IGNORECASE)
-    if m:
-        return f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
-    m = re.search(
-        r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
-        s
-    )
-    if m:
-        return m.group(1).strip()
-    return None
+def _extract_date_value(raw):
+    """
+    מקבל מחרוזת גולמית שמכילה 'DATE' (כולל כל הטקסט שאחריו).
+    שלב 1 — חותך את כל מה שלפני ואכלול ה-':' או המילה DATE עצמה,
+             ומנקה רווחים ונקודות מהתחלה/סוף.
+    שלב 2 — מחזיר את הערך הנקי כמחרוזת (כפי שנכתב בקובץ), או None.
+    """
+    # חתוך אחרי ':' אם קיים
+    if ':' in raw:
+        after = raw.split(':', 1)[1]
+    else:
+        # חתוך אחרי המילה DATE (באיות כלשהו)
+        after = re.split(r'DATE', raw, maxsplit=1, flags=re.IGNORECASE)[-1]
+
+    value = after.strip().strip('.')
+    return value if value else None
 
 
 def extract_file_header(df_file):
     """
-    סורק את 15 השורות הראשונות ו-10 העמודות הראשונות של הקובץ.
-    חיפוש case-insensitive עם partial match — תומך ב:
-      'SOURCER:daisy', 'sourcer : Hellen', 'Date:12th,mar,2026', 'date : 2026-03-12' וכו'.
+    סורק את 20 השורות הראשונות ו-10 העמודות הראשונות של הקובץ.
+    חיפוש case-insensitive + partial match לכל תא שמכיל 'DATE' או 'SOURCER'.
+
+    לוגיקת DATE:
+      - כל תא שמכיל את המילה DATE (בכל צורה) נחשב.
+      - הערך נלקח מכל מה שאחרי ':' (או אחרי המילה DATE אם אין ':').
+      - אם התא ריק אחרי החיתוך, מחפשים בתאים הסמוכים ימינה.
+      - הערך מוצג כפי שנכתב (נקי) — ללא regex על פורמט.
+
     מחזיר (sourcer_str, date_str) — כל אחד יכול להיות None.
     """
     sourcer = None
     date    = None
 
-    max_rows = min(15, len(df_file))
+    max_rows = min(20, len(df_file))
     max_cols = min(10, len(df_file.columns))
 
     for r in range(max_rows):
@@ -522,10 +526,9 @@ def extract_file_header(df_file):
             if pd.isna(cell):
                 continue
             cell_str = str(cell).strip()
-            cell_up  = cell_str.upper()
 
-            # --- SOURCER: partial + case-insensitive ---
-            if sourcer is None and re.search(r'SOURCER\s*:?', cell_up):
+            # --- SOURCER: case-insensitive partial ---
+            if sourcer is None and re.search(r'SOURCER', cell_str, re.IGNORECASE):
                 m = re.search(
                     r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
                     cell_str, re.IGNORECASE
@@ -546,17 +549,20 @@ def extract_file_header(df_file):
                                         sourcer = name.capitalize()
                                         break
 
-            # --- DATE: partial + case-insensitive ---
-            if date is None and re.search(r'\bDATE\s*:?', cell_up):
-                date = _parse_date_from_string(cell_str)
-                if not date:
-                    # תאריך בתאים הסמוכים (עד 2 עמודות ימינה)
+            # --- DATE: כל תא שמכיל 'DATE' בכל צורה ---
+            if date is None and re.search(r'\bDATE\b', cell_str, re.IGNORECASE):
+                val = _extract_date_value(cell_str)
+                if val:
+                    date = val
+                else:
+                    # ערך בתאים הסמוכים ימינה
                     for dc in range(1, 3):
                         if c + dc < max_cols:
                             nc = df_file.iloc[r, c + dc]
                             if not pd.isna(nc):
-                                date = _parse_date_from_string(str(nc).strip())
-                                if date:
+                                candidate = str(nc).strip().strip('.')
+                                if candidate:
+                                    date = candidate
                                     break
 
             if sourcer and date:
