@@ -135,7 +135,6 @@ div[data-testid="stVerticalBlock"] > div[style*="border"] {{ border-radius: 12px
 div[data-testid="stVerticalBlock"] > div[style*="border"]:hover {{ box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }}
 div[data-testid="stVerticalBlock"] > div[style*="border"] > div[data-testid="stVerticalBlock"] {{ height: 100% !important; max-height: 100% !important; overflow: hidden !important; display: flex !important; flex-direction: column !important; flex: 1 1 auto !important; min-height: 0 !important; }}
 .img-box {{ width: 100%; height: 220px !important; min-height: 220px !important; max-height: 220px !important; flex-shrink: 0 !important; overflow: hidden; border-radius: 8px; background: #fafafa; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; margin-bottom: 6px; }}
-.img-box .date-badge {{ position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.52); color: #fff; font-size: 10px; padding: 2px 7px; border-radius: 4px; white-space: nowrap; z-index: 10; font-family: Arial, sans-serif; }}
 .img-box img {{ max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px; transition: none; position: relative; z-index: 1; cursor: zoom-in; }}
 #img-zoom-overlay {{ display:none; position:fixed; z-index:999999; pointer-events:none; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.45); border:2px solid rgba(255,255,255,0.6); transition: opacity 0.18s ease; opacity:0; background:#fff; }}
 #img-zoom-overlay.visible {{ display:block; opacity:1; }}
@@ -685,15 +684,10 @@ def _resolve_image_id(row, i, img_map):
     return list(valid_images.values())[i % len(valid_images)]
 
 
-def _build_image_block_html(img_b64, date_str):
+def _build_image_block_html(img_b64):
     """
-    Fixed-height image box.
-    תאריך מוצג כ-badge בפינה העליונה-שמאלית של התמונה.
+    Fixed-height image box — ללא date badge (הוסר, מוצג בשורת המטא בלבד).
     """
-    date_badge = ""
-    if date_str:
-        date_badge = f'<span class="date-badge">📅 {date_str}</span>'
-
     if img_b64:
         img_tag = (
             f'<img src="data:image/jpeg;base64,{img_b64}" alt="product image">'
@@ -701,7 +695,7 @@ def _build_image_block_html(img_b64, date_str):
     else:
         img_tag = '<span style="color:#ccc; font-size:11px;">📷 לא נמצאה תמונה</span>'
 
-    return f'<div class="img-box">{date_badge}{img_tag}</div>'
+    return f'<div class="img-box">{img_tag}</div>'
 
 
 def _build_meta_header_html(row):
@@ -721,7 +715,7 @@ def _build_meta_header_html(row):
 
     return (
         f"<div style='font-size:10px; color:#888; font-family:Arial,sans-serif; "
-        f"margin-bottom:4px; margin-top:-2px; white-space:nowrap; "
+        f"margin-bottom:10px; margin-top:0; white-space:nowrap; flex-shrink:0; "
         f"overflow:hidden; text-overflow:ellipsis; direction:ltr; text-align:left;'>"
         f"{content}</div>"
     )
@@ -829,7 +823,7 @@ def render_product_card(row, i, img_map, usd_ils_rate):
         # ── Image ──────────────────────────────────────────────────
         img_id  = _resolve_image_id(row, i, img_map)
         img_b64 = get_image_base64(img_id) if img_id else None
-        img_block = _build_image_block_html(img_b64, row.get('date'))
+        img_block = _build_image_block_html(img_b64)
 
         # ── Tags ──────────────────────────────────────────────────
         tags_html = _build_tags_html(row)
