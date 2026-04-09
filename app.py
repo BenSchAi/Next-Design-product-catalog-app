@@ -645,27 +645,191 @@ def load_all_data():
 # UI COMPONENTS
 # =============================================================================
 
-def _resolve_image_id(row, i, img_map):
+def _resolve_image_ids(row, img_map):
+    """
+    מחזיר רשימה מסודרת של כל ה-image IDs השייכים למוצר זה.
+    פורמט חדש: base_row_<N>_img_<M>.png
+    פורמט ישן (fallback): base_row_<N>.png
+    """
     base_name_clean = normalize_text(row['base_filename'])
-    valid_images = {
+    row_target_new  = f"row_{row['row_index']}_img_"
+    row_target_old  = f"row_{row['row_index']}"
+
+    # חיפוש פורמט חדש קודם
+    matched = {
         name: img_id for name, img_id in img_map.items()
         if base_name_clean in normalize_text(name)
+        and row_target_new in normalize_text(name)
     }
-    if not valid_images:
-        return None
-    row_target = f"row_{row['row_index']}"
-    for name, img_id in valid_images.items():
-        if row_target in normalize_text(name):
-            return img_id
-    return list(valid_images.values())[i % len(valid_images)]
+    if not matched:
+        # fallback לפורמט ישן
+        matched = {
+            name: img_id for name, img_id in img_map.items()
+            if base_name_clean in normalize_text(name)
+            and row_target_old in normalize_text(name)
+        }
+
+    def img_sort_key(name):
+        m = re.search(r'_img_(\d+)', name, re.IGNORECASE)
+        return int(m.group(1)) if m else 0
+
+    return [img_id for name, img_id in sorted(matched.items(), key=lambda x: img_sort_key(x[0]))]
 
 
-def _build_image_block_html(img_b64):
-    if img_b64:
-        img_tag = f'<img src="data:image/jpeg;base64,{img_b64}" alt="product image">'
-    else:
-        img_tag = '<span style="color:#ccc; font-size:11px;">📷 לא נמצאה תמונה</span>'
-    return f'<div class="img-box">{img_tag}</div>'
+def _build_gallery_html(img_ids, card_uid):
+    """
+    גלריה עם חצים + נקודות + zoom בהover.
+    תומך במובייל (swipe) ובדסקטופ (חצים + hover zoom).
+    """
+    if not img_ids:
+        return '<div class="img-box"><span style="color:#ccc;font-size:11px;">📷 לא נמצאה תמונה</span></div>'
+
+    # טוען את כל התמונות
+    images_b64 = []
+    for img_id in img_ids:
+        b64 = get_image_base64(img_id)
+        if b64:
+            images_b64.append(b64)
+
+    if not images_b64:
+        return '<div class="img-box"><span style="color:#ccc;font-size:11px;">📷 לא נמצאה תמונה</span></div>'
+
+    total = len(images_b64)
+    uid   = card_uid.replace('-', '_').replace('.', '_')
+
+    # בניית תגי img
+    slides_html = ""
+    for idx, b64 in enumerate(images_b64):
+        display = "block" if idx == 0 else "none"
+        slides_html += (
+            f'<img id="gimg_{uid}_{idx}" '
+            f'src="data:image/jpeg;base64,{b64}" '
+            f'alt="product image" '
+            f'style="max-width:100%;max-height:220px;object-fit:contain;'
+            f'border-radius:4px;cursor:zoom-in;display:{display};" '
+            f'class="gallery-img" data-uid="{uid}">'
+        )
+
+    # חצים — מוצגים רק אם יש יותר מתמונה אחת
+    arrows_html = ""
+    if total > 1:
+        arrows_html = f"""
+        <div onclick="galleryPrev('{uid}')"
+             style="position:absolute;left:4px;top:50%;transform:translateY(-50%);
+                    z-index:10;background:rgba(0,0,0,0.45);color:#fff;
+                    border-radius:50%;width:28px;height:28px;display:flex;
+                    align-items:center;justify-content:center;
+                    cursor:pointer;font-size:16px;user-select:none;">&#8249;</div>
+        <div onclick="galleryNext('{uid}')"
+             style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
+                    z-index:10;background:rgba(0,0,0,0.45);color:#fff;
+                    border-radius:50%;width:28px;height:28px;display:flex;
+                    align-items:center;justify-content:center;
+                    cursor:pointer;font-size:16px;user-select:none;">&#8250;</div>
+        """
+
+    # נקודות — מוצגות רק אם יש יותר מתמונה אחת
+    dots_html = ""
+    if total > 1:
+        dots_inner = ""
+        for idx in range(total):
+            active_style = "background:#555;" if idx == 0 else "background:#ccc;"
+            dots_inner += (
+                f'<span id="gdot_{uid}_{idx}" '
+                f'onclick="galleryGoto(\'{uid}\',{idx})" '
+                f'style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+                f'margin:0 3px;cursor:pointer;transition:background 0.2s;{active_style}"></span>'
+            )
+        dots_html = (
+            f'<div style="text-align:center;padding:4px 0;flex-shrink:0;">'
+            f'{dots_inner}</div>'
+        )
+
+    # counter
+    counter_html = ""
+    if total > 1:
+        counter_html = (
+            f'<div id="gcnt_{uid}" '
+            f'style="position:absolute;bottom:6px;right:8px;'
+            f'background:rgba(0,0,0,0.5);color:#fff;font-size:10px;'
+            f'padding:1px 6px;border-radius:10px;z-index:10;">'
+            f'1/{total}</div>'
+        )
+
+    js = f"""
+<script>
+(function(){{
+  var total_{uid} = {total};
+  var cur_{uid}   = 0;
+
+  window.galleryNext = window.galleryNext || function(uid) {{
+    var fn = window['_galleryNext_' + uid];
+    if (fn) fn();
+  }};
+  window.galleryPrev = window.galleryPrev || function(uid) {{
+    var fn = window['_galleryPrev_' + uid];
+    if (fn) fn();
+  }};
+  window.galleryGoto = window.galleryGoto || function(uid, idx) {{
+    var fn = window['_galleryGoto_' + uid];
+    if (fn) fn(idx);
+  }};
+
+  function show_{uid}(idx) {{
+    var doc = window.parent ? window.parent.document : document;
+    for (var i = 0; i < total_{uid}; i++) {{
+      var el = doc.getElementById('gimg_{uid}_' + i);
+      var dt = doc.getElementById('gdot_{uid}_' + i);
+      if (el) el.style.display = (i === idx) ? 'block' : 'none';
+      if (dt) dt.style.background = (i === idx) ? '#555' : '#ccc';
+    }}
+    var cnt = doc.getElementById('gcnt_{uid}');
+    if (cnt) cnt.textContent = (idx+1) + '/' + total_{uid};
+    cur_{uid} = idx;
+  }}
+
+  window['_galleryNext_' + '{uid}'] = function() {{
+    show_{uid}((cur_{uid} + 1) % total_{uid});
+  }};
+  window['_galleryPrev_' + '{uid}'] = function() {{
+    show_{uid}((cur_{uid} - 1 + total_{uid}) % total_{uid});
+  }};
+  window['_galleryGoto_' + '{uid}'] = function(idx) {{
+    show_{uid}(idx);
+  }};
+
+  // Swipe support
+  var box = (window.parent ? window.parent.document : document).getElementById('gbox_{uid}');
+  if (box) {{
+    var startX = 0;
+    box.addEventListener('touchstart', function(e) {{ startX = e.touches[0].clientX; }}, {{passive:true}});
+    box.addEventListener('touchend', function(e) {{
+      var diff = startX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 40) {{
+        if (diff > 0) window['_galleryNext_{uid}']();
+        else          window['_galleryPrev_{uid}']();
+      }}
+    }}, {{passive:true}});
+  }}
+}})();
+</script>
+"""
+
+    return f"""
+<div style="display:flex;flex-direction:column;flex-shrink:0;">
+  <div id="gbox_{uid}"
+       style="width:100%;height:220px;min-height:220px;max-height:220px;
+              overflow:hidden;border-radius:8px;background:#fafafa;
+              display:flex;align-items:center;justify-content:center;
+              position:relative;margin-bottom:4px;">
+    {slides_html}
+    {arrows_html}
+    {counter_html}
+  </div>
+  {dots_html}
+</div>
+{js}
+"""
 
 
 def _build_meta_header_html(row):
@@ -677,9 +841,49 @@ def _build_meta_header_html(row):
         content = f"📅 {date_str}"
     return (
         f"<div style='font-size:10px; color:#888; font-family:Arial,sans-serif; "
-        f"margin-bottom:10px; margin-top:0; white-space:nowrap; flex-shrink:0; "
+        f"margin-bottom:6px; margin-top:0; white-space:nowrap; flex-shrink:0; "
         f"overflow:hidden; text-overflow:ellipsis; direction:ltr; text-align:left;'>"
         f"{content}</div>"
+    )
+
+
+def _build_product_title_html(row):
+    """
+    כותרת המוצר — DESCRIPTION בעדיפות, אחר כך ITEM NO.
+    """
+    title = ""
+    for detail in row.get('display_list', []):
+        d_up = detail.upper()
+        if 'DESCRIPTION' in d_up or 'DESCRIPTION:' in d_up:
+            # חילוץ הערך אחרי ':'
+            parts = detail.split(':', 1)
+            if len(parts) > 1:
+                title = parts[1].strip()
+            else:
+                title = detail.strip()
+            break
+
+    if not title:
+        for detail in row.get('display_list', []):
+            d_up = detail.upper()
+            if 'ITEM NO' in d_up or 'ITEM:' in d_up:
+                parts = detail.split(':', 1)
+                if len(parts) > 1:
+                    title = parts[1].strip()
+                break
+
+    if not title:
+        return ""
+
+    # קיצור אם ארוך מדי
+    if len(title) > 60:
+        title = title[:57] + "..."
+
+    return (
+        f"<div style='font-size:13px; font-weight:900; color:#111; "
+        f"margin-bottom:5px; flex-shrink:0; overflow:hidden; "
+        f"text-overflow:ellipsis; white-space:nowrap; direction:ltr;'>"
+        f"{title}</div>"
     )
 
 
@@ -740,6 +944,8 @@ def _build_price_footer_html(row, usd_ils_rate):
 
 def render_product_card(row, i, img_map, usd_ils_rate):
     unique_item_id = f"{row['base_filename']}_{row['row_index']}"
+    uid_clean      = unique_item_id.replace(' ', '_').replace('.', '_')
+
     with st.container(border=True):
         is_selected = unique_item_id in st.session_state.selected_items
         if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
@@ -752,10 +958,12 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 st.rerun()
 
         meta_header = _build_meta_header_html(row)
-        img_id  = _resolve_image_id(row, i, img_map)
-        img_b64 = get_image_base64(img_id) if img_id else None
-        img_block   = _build_image_block_html(img_b64)
-        tags_html   = _build_tags_html(row)
+        title_html  = _build_product_title_html(row)
+
+        # גלריה — כל התמונות של המוצר
+        img_ids   = _resolve_image_ids(row, img_map)
+        gallery   = _build_gallery_html(img_ids, uid_clean)
+        tags_html = _build_tags_html(row)
 
         general_info, price_info, packing_info, delivery_info, sample_info, other_info = \
             classify_details(row['display_list'])
@@ -791,13 +999,17 @@ def render_product_card(row, i, img_map, usd_ils_rate):
 
         card_html = (
             f'<div style="display:flex; flex-direction:column; '
-            f'height:610px; max-height:610px; overflow:hidden; '
+            f'height:640px; max-height:640px; overflow:hidden; '
             f'direction:ltr; text-align:left;">'
-            f'{meta_header}{img_block}'
+            f'{meta_header}'
+            f'{title_html}'
+            f'{gallery}'
             f'<div style="flex-shrink:0;">{tags_html}</div>'
             f'{details_html}{footer_html}'
             f'</div>'
         )
+        st.markdown(card_html, unsafe_allow_html=True)
+
         st.markdown(card_html, unsafe_allow_html=True)
 
 
