@@ -505,7 +505,10 @@ def load_all_data():
 
     all_products = []
 
-    for item in results.get('files', []):
+    files_found = results.get('files', [])
+    st.write(f"🔎 DEBUG2: נמצאו {len(files_found)} קבצי אקסל בדרייב")
+
+    for item in files_found:
         try:
             request = service.files().get_media(fileId=item['id'], supportsAllDrives=True)
             fh = io.BytesIO()
@@ -566,7 +569,8 @@ def load_all_data():
                             'sourcer':         file_sourcer,
                             'date':            file_date,
                         })
-        except:
+        except Exception as _e:
+            st.warning(f"שגיאה בקובץ {item.get('name','?')}: {_e}")
             continue
 
     img_results = service.files().list(
