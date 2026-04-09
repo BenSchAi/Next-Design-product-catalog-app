@@ -351,17 +351,74 @@ def extract_capacity(full_text):
 
 
 def extract_materials(full_text):
+    """
+    שלב 1 — חיפוש ישיר בשורת Material: (הדיוק הגבוה ביותר).
+    שלב 2 — חיפוש keyword-based בכל הטקסט (כיסוי חומרים ידועים).
+    כל ערך שנמצא בשורת Material ואינו ברשימה הקבועה נשמר כפי שהוא (Title Case)
+    ויצטרף אוטומטית לאפשרויות הסינון.
+    """
     materials = []
     text_lower = full_text.lower()
-    if 'stainless' in text_lower or '304' in text_lower or '316' in text_lower:
-        materials.append('Stainless Steel')
-    if 'plastic' in text_lower or re.search(r'\bpp\b', text_lower) or 'tritan' in text_lower:
-        materials.append('Plastic')
-    if 'bamboo'   in text_lower: materials.append('Bamboo')
-    if 'glass'    in text_lower: materials.append('Glass')
-    if 'silicone' in text_lower: materials.append('Silicone')
-    if 'ceramic'  in text_lower: materials.append('Ceramic')
-    return list(set(materials))
+
+    # ── שלב 1: שורת Material: ────────────────────────────────────────────
+    # תומך ב: "Material:", "Material :", "MATERIAL:", "חומר:" וכד'
+    mat_match = re.search(
+        r'(?:material|חומר)\s*:?\s*(.+?)(?:\n|$)',
+        full_text,
+        re.IGNORECASE,
+    )
+    if mat_match:
+        raw_val = mat_match.group(1).strip()
+        # פיצול לפי פסיק / slash / & לתמיכה בריבוי חומרים
+        for part in re.split(r'[,/&+]', raw_val):
+            part = part.strip()
+            if not part or len(part) > 60:
+                continue
+            part_lower = part.lower()
+
+            # מיפוי לשמות סטנדרטיים
+            if 'stainless' in part_lower or '304' in part_lower or '316' in part_lower:
+                materials.append('Stainless Steel')
+            elif 'plastic' in part_lower or re.search(r'\bpp\b', part_lower) or 'tritan' in part_lower:
+                materials.append('Plastic')
+            elif 'bamboo'   in part_lower: materials.append('Bamboo')
+            elif 'glass'    in part_lower: materials.append('Glass')
+            elif 'silicone' in part_lower: materials.append('Silicone')
+            elif 'ceramic'  in part_lower: materials.append('Ceramic')
+            elif 'tin'      in part_lower or 'tinplate' in part_lower: materials.append('Tin')
+            elif 'aluminum' in part_lower or 'aluminium' in part_lower: materials.append('Aluminum')
+            elif 'wood'     in part_lower or 'wooden'   in part_lower: materials.append('Wood')
+            elif 'leather'  in part_lower: materials.append('Leather')
+            elif 'cotton'   in part_lower: materials.append('Cotton')
+            elif 'rpet'     in part_lower or 'recycled' in part_lower: materials.append('Recycled')
+            elif 'cork'     in part_lower: materials.append('Cork')
+            elif 'wheat'    in part_lower: materials.append('Wheat Straw')
+            else:
+                # חומר לא מוכר — שומרים אותו כ-Title Case כדי שיצטרף לסינון
+                cleaned = re.sub(r'\d+(\.\d+)?\s*(mm|cm|inch|oz|ml|%)', '', part).strip()
+                if cleaned and len(cleaned) >= 2:
+                    materials.append(cleaned.title())
+
+    # ── שלב 2: keyword fallback (אם שורת Material לא נמצאה / ריקה) ──────
+    if not materials:
+        if 'stainless' in text_lower or '304' in text_lower or '316' in text_lower:
+            materials.append('Stainless Steel')
+        if 'plastic' in text_lower or re.search(r'\bpp\b', text_lower) or 'tritan' in text_lower:
+            materials.append('Plastic')
+        if 'bamboo'   in text_lower: materials.append('Bamboo')
+        if 'glass'    in text_lower: materials.append('Glass')
+        if 'silicone' in text_lower: materials.append('Silicone')
+        if 'ceramic'  in text_lower: materials.append('Ceramic')
+        if re.search(r'\btin\b', text_lower): materials.append('Tin')
+        if 'aluminum' in text_lower or 'aluminium' in text_lower: materials.append('Aluminum')
+        if 'wooden'   in text_lower or re.search(r'\bwood\b', text_lower): materials.append('Wood')
+        if 'leather'  in text_lower: materials.append('Leather')
+        if 'cotton'   in text_lower: materials.append('Cotton')
+        if re.search(r'\brpet\b', text_lower): materials.append('Recycled')
+        if re.search(r'\bcork\b', text_lower): materials.append('Cork')
+        if 'wheat straw' in text_lower: materials.append('Wheat Straw')
+
+    return list(dict.fromkeys(materials))  # מסיר כפילויות תוך שמירת הסדר
 
 
 def transform_he_to_en(text):
@@ -851,9 +908,24 @@ def render_sidebar(df):
         available_capacities = (
             sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
         )
+        # רשימת חומרים דינמית — נשאבת מהנתונים + חומרי בסיס קבועים
+        BASE_MATERIALS = [
+            "Stainless Steel", "Plastic", "Bamboo", "Glass",
+            "Silicone", "Ceramic", "Tin", "Aluminum", "Wood",
+            "Leather", "Cotton", "Recycled", "Cork", "Wheat Straw",
+        ]
+        if not df.empty:
+            from_data = [
+                m for mlist in df['materials'].dropna()
+                for m in (mlist if isinstance(mlist, list) else [])
+                if m
+            ]
+            available_materials = sorted(set(BASE_MATERIALS + from_data))
+        else:
+            available_materials = BASE_MATERIALS
         selected_materials = st.multiselect(
             "חומר (Material)",
-            ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"],
+            available_materials,
             placeholder="בחר חומרים...",
         )
         selected_capacities = st.multiselect(
