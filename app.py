@@ -74,7 +74,7 @@ PACKING_KEYWORDS  = ['OPP BAG', 'POLY BAG', 'PE BAG', 'PACKING', 'MEAS', 'CTN', 
 PRICE_KEYWORDS    = ['USD', 'PRICE']
 PACKING_KEYS      = ['PACKING', 'OPP', 'BOX', 'CTN', 'MEAS', 'G.W', 'N.W', 'KGS']
 DELIVERY_KEYS     = ['DELIVERY', 'DAYS', 'LEAD TIME', 'VALIDITY']
-GENERAL_KEYS      = ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']
+GENERAL_KEYS      = ['DATE', 'SOURCER']  # ITEM ו-DESCRIPTION מוצגים ככותרת בלבד
 SKIP_CONTENT_KEYS = ['WEB', 'HTTP', 'HTTPS', 'EXCHANGE RATE', 'FOB', 'PICTURE', 'PRODUCT DETAILS']
 ITEM_TRIGGER_KEYS = ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'DESCRIPTION :']
 
@@ -352,157 +352,66 @@ def extract_capacity(full_text):
 
 def extract_materials(full_text):
     """
-    שלב 1 — חיפוש ישיר בשורת Material: (הדיוק הגבוה ביותר).
-    שלב 2 — חיפוש keyword-based בכל הטקסט (כיסוי חומרים ידועים).
-    כל ערך שנמצא בשורת Material ואינו ברשימה הקבועה נשמר כפי שהוא (Title Case)
-    ויצטרף אוטומטית לאפשרויות הסינון.
+    חיפוש מדויק בשורת Material: בלבד.
+    מחזיר רק שמות חומרים אמיתיים — לא מידות, כמויות, תאריכים.
     """
+    import re as _re
     materials = []
-    text_lower = full_text.lower()
 
-    # ── שלב 1: שורת Material: ────────────────────────────────────────────
-    # תומך ב: "Material:", "Material :", "MATERIAL:", "חומר:" וכד'
-    mat_match = re.search(
-        r'(?:material|חומר)\s*:?\s*(.+?)(?:\n|$)',
+    # חיפוש שורת Material: בלבד (חייבת נקודתיים)
+    mat_match = _re.search(
+        r'(?:^|\n)\s*(?:material|חומר)\s*:\s*(.+?)(?:\n|$)',
         full_text,
-        re.IGNORECASE,
+        _re.IGNORECASE | _re.MULTILINE,
     )
-    if mat_match:
-        raw_val = mat_match.group(1).strip()
-        # פיצול לפי פסיק / slash / & לתמיכה בריבוי חומרים
-        for part in re.split(r'[,/&+]', raw_val):
-            part = part.strip()
-            if not part or len(part) > 60:
-                continue
-            part_lower = part.lower()
+    if not mat_match:
+        return []
 
-            # מיפוי לשמות סטנדרטיים
-            if 'stainless' in part_lower or '304' in part_lower or '316' in part_lower:
-                materials.append('Stainless Steel')
-            elif 'plastic' in part_lower or re.search(r'\bpp\b', part_lower) or 'tritan' in part_lower:
-                materials.append('Plastic')
-            elif 'bamboo'   in part_lower: materials.append('Bamboo')
-            elif 'glass'    in part_lower: materials.append('Glass')
-            elif 'silicone' in part_lower: materials.append('Silicone')
-            elif 'ceramic'  in part_lower: materials.append('Ceramic')
-            elif 'tin'      in part_lower or 'tinplate' in part_lower: materials.append('Tin')
-            elif 'aluminum' in part_lower or 'aluminium' in part_lower: materials.append('Aluminum')
-            elif 'wood'     in part_lower or 'wooden'   in part_lower: materials.append('Wood')
-            elif 'leather'  in part_lower: materials.append('Leather')
-            elif 'cotton'   in part_lower: materials.append('Cotton')
-            elif 'rpet'     in part_lower or 'recycled' in part_lower: materials.append('Recycled')
-            elif 'cork'     in part_lower: materials.append('Cork')
-            elif 'wheat'    in part_lower: materials.append('Wheat Straw')
-            else:
-                # חומר לא מוכר — שומרים אותו כ-Title Case כדי שיצטרף לסינון
-                cleaned = re.sub(r'\d+(\.\d+)?\s*(mm|cm|inch|oz|ml|%)', '', part).strip()
-                if cleaned and len(cleaned) >= 2:
-                    materials.append(cleaned.title())
+    raw_val = mat_match.group(1).strip()
 
-    # ── שלב 2: keyword fallback (אם שורת Material לא נמצאה / ריקה) ──────
-    if not materials:
-        if 'stainless' in text_lower or '304' in text_lower or '316' in text_lower:
+    # סינון: אם הערך מכיל מספרים עם יחידות (מידה/כמות) — לא חומר
+    if _re.search(r'\d+\s*(?:mm|cm|pcs|pc|kgs?|g\.?w|n\.?w|\*)', raw_val, _re.IGNORECASE):
+        return []
+
+    # פיצול לפי פסיק / slash
+    for part in _re.split(r'[,/]', raw_val):
+        part = part.strip()
+        if not part or len(part) > 50:
+            continue
+
+        # סינון נוסף: מילים שאינן חומר
+        skip_words = ['usd', 'price', 'exw', 'fob', 'days', 'pcs',
+                      'deposit', 'balance', 'payment', 'sample', 'order']
+        if any(w in part.lower() for w in skip_words):
+            continue
+
+        part_lower = part.lower()
+
+        # מיפוי לשמות סטנדרטיים
+        if 'stainless' in part_lower or '304' in part_lower or '316' in part_lower:
             materials.append('Stainless Steel')
-        if 'plastic' in text_lower or re.search(r'\bpp\b', text_lower) or 'tritan' in text_lower:
+        elif 'plastic' in part_lower or _re.search(r'\bpp\b', part_lower) or 'tritan' in part_lower:
             materials.append('Plastic')
-        if 'bamboo'   in text_lower: materials.append('Bamboo')
-        if 'glass'    in text_lower: materials.append('Glass')
-        if 'silicone' in text_lower: materials.append('Silicone')
-        if 'ceramic'  in text_lower: materials.append('Ceramic')
-        if re.search(r'\btin\b', text_lower): materials.append('Tin')
-        if 'aluminum' in text_lower or 'aluminium' in text_lower: materials.append('Aluminum')
-        if 'wooden'   in text_lower or re.search(r'\bwood\b', text_lower): materials.append('Wood')
-        if 'leather'  in text_lower: materials.append('Leather')
-        if 'cotton'   in text_lower: materials.append('Cotton')
-        if re.search(r'\brpet\b', text_lower): materials.append('Recycled')
-        if re.search(r'\bcork\b', text_lower): materials.append('Cork')
-        if 'wheat straw' in text_lower: materials.append('Wheat Straw')
+        elif 'bamboo'   in part_lower: materials.append('Bamboo')
+        elif 'glass'    in part_lower: materials.append('Glass')
+        elif 'silicone' in part_lower: materials.append('Silicone')
+        elif 'ceramic'  in part_lower: materials.append('Ceramic')
+        elif 'tin'      in part_lower or 'tinplate' in part_lower: materials.append('Tin')
+        elif 'aluminum' in part_lower or 'aluminium' in part_lower: materials.append('Aluminum')
+        elif 'wood'     in part_lower or 'wooden'   in part_lower: materials.append('Wood')
+        elif 'leather'  in part_lower: materials.append('Leather')
+        elif 'cotton'   in part_lower: materials.append('Cotton')
+        elif 'rpet'     in part_lower or 'recycled' in part_lower: materials.append('Recycled')
+        elif 'cork'     in part_lower: materials.append('Cork')
+        elif 'wheat'    in part_lower: materials.append('Wheat Straw')
+        elif 'pvc'      in part_lower: materials.append('PVC')
+        elif 'nylon'    in part_lower: materials.append('Nylon')
+        elif 'rubber'   in part_lower: materials.append('Rubber')
+        elif len(part) >= 2:
+            # חומר לא מוכר — שומר כ-Title Case
+            materials.append(part.title())
 
-    return list(dict.fromkeys(materials))  # מסיר כפילויות תוך שמירת הסדר
-
-
-def transform_he_to_en(text):
-    he_en_map = {
-        'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g',
-        'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n',
-        'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u',
-        'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y',
-    }
-    return "".join(he_en_map.get(char, char) for char in text.lower())
-
-
-def normalize_text(text):
-    if not isinstance(text, str):
-        text = str(text)
-    return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF ]', ' ', text).lower()
-
-
-def classify_details(display_list):
-    general_info, price_info, packing_info = [], [], []
-    delivery_info, sample_info, other_info  = [], [], []
-    for detail in display_list:
-        if contains_chinese(detail):
-            continue
-        d_up = detail.upper()
-        if 'MOQ' in d_up:
-            continue
-        if any(k in d_up for k in PRICE_KEYWORDS) or '$' in detail:
-            price_info.append(detail)
-        elif any(k in d_up for k in PACKING_KEYS):
-            packing_info.append(detail)
-        elif 'SAMPLE' in d_up and any(k in d_up for k in ['TIME', 'DAY', 'LEAD']):
-            sample_info.append(detail)
-        elif any(k in d_up for k in DELIVERY_KEYS):
-            delivery_info.append(detail)
-        elif any(k in d_up for k in GENERAL_KEYS):
-            general_info.append(detail)
-        else:
-            other_info.append(detail)
-    return general_info, price_info, packing_info, delivery_info, sample_info, other_info
-
-
-# =============================================================================
-# GOOGLE DRIVE SERVICE & DATA LOADING
-# =============================================================================
-
-def get_gdrive_service():
-    try:
-        encoded_key = constants.GCP_SERVICE_ACCOUNT
-        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
-        info  = json.loads(decoded_key)
-        creds = service_account.Credentials.from_service_account_info(info)
-        return build('drive', 'v3', credentials=creds)
-    except Exception as e:
-        st.error(f"שגיאת חיבור: {e}")
-        return None
-
-
-@st.cache_data(ttl=3600)
-def get_image_base64(file_id):
-    service = get_gdrive_service()
-    if not service:
-        return None
-    try:
-        request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
-        fh = io.BytesIO()
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done:
-            _, done = downloader.next_chunk()
-        return base64.b64encode(fh.getvalue()).decode('utf-8')
-    except:
-        return None
-
-
-def _extract_date_value(raw):
-    if ':' in raw:
-        after = raw.split(':', 1)[1]
-    else:
-        after = re.split(r'DATE', raw, maxsplit=1, flags=re.IGNORECASE)[-1]
-    value = after.strip().strip('.')
-    return value if value else None
-
-
+    return list(dict.fromkeys(materials))
 def extract_file_header(df_file):
     sourcer = None
     date    = None
@@ -648,32 +557,45 @@ def load_all_data():
 def _resolve_image_ids(row, img_map):
     """
     מחזיר רשימה מסודרת של כל ה-image IDs השייכים למוצר זה.
-    פורמט חדש: base_row_<N>_img_<M>.png
-    פורמט ישן (fallback): base_row_<N>.png
+    המחלץ שומר: base_row_<first_top_row>_img_<N>.png
+    app.py מחפש לפי row_index שהוא מספר השורה של ITEM/DESCRIPTION.
+    כיוון שהתמונה תמיד מתחילה כמה שורות לפני הטקסט,
+    מחפשים את התמונה הכי קרובה ל-row_index (בטווח סביר).
     """
     base_name_clean = normalize_text(row['base_filename'])
-    row_target_new  = f"row_{row['row_index']}_img_"
-    row_target_old  = f"row_{row['row_index']}"
+    row_index       = row['row_index']
 
-    # חיפוש פורמט חדש קודם
-    matched = {
+    # כל התמונות של הקובץ הזה
+    file_imgs = {
         name: img_id for name, img_id in img_map.items()
         if base_name_clean in normalize_text(name)
-        and row_target_new in normalize_text(name)
     }
-    if not matched:
-        # fallback לפורמט ישן
-        matched = {
-            name: img_id for name, img_id in img_map.items()
-            if base_name_clean in normalize_text(name)
-            and row_target_old in normalize_text(name)
-        }
+    if not file_imgs:
+        return []
 
-    def img_sort_key(name):
-        m = re.search(r'_img_(\d+)', name, re.IGNORECASE)
-        return int(m.group(1)) if m else 0
+    # חיפוש פורמט חדש: base_row_<R>_img_<N>.png
+    # מחפש את ה-R הכי קרוב ל-row_index (תמונה לפני או ב-row_index)
+    row_nums = set()
+    for name in file_imgs:
+        m = re.search(r'_row_(\d+)_img_', normalize_text(name))
+        if m:
+            row_nums.add(int(m.group(1)))
 
-    return [img_id for name, img_id in sorted(matched.items(), key=lambda x: img_sort_key(x[0]))]
+    if row_nums:
+        # ה-R הכי קרוב שהוא <= row_index + 5
+        candidates = [r for r in row_nums if r <= row_index + 5]
+        if candidates:
+            best_row = max(candidates)  # הכי קרוב מלמטה
+            matched = {
+                name: img_id for name, img_id in file_imgs.items()
+                if f"_row_{best_row}_img_" in normalize_text(name)
+            }
+            def img_sort_key(name):
+                m2 = re.search(r'_img_(\d+)', name, re.IGNORECASE)
+                return int(m2.group(1)) if m2 else 0
+            return [img_id for name, img_id in sorted(matched.items(), key=lambda x: img_sort_key(x[0]))]
+
+    return []
 
 
 def _build_gallery_html(img_ids, card_uid):
@@ -849,33 +771,30 @@ def _build_meta_header_html(row):
 
 def _build_product_title_html(row):
     """
-    כותרת המוצר — DESCRIPTION בעדיפות, אחר כך ITEM NO.
+    כותרת המוצר — DESCRIPTION בעדיפות, אחר כך ITEM NO / ITEM REF.
+    חיפוש מדויק: השורה חייבת להתחיל ב-DESCRIPTION: או ITEM NO:
     """
+    import re as _re
     title = ""
+
     for detail in row.get('display_list', []):
-        d_up = detail.upper()
-        if 'DESCRIPTION' in d_up or 'DESCRIPTION:' in d_up:
-            # חילוץ הערך אחרי ':'
-            parts = detail.split(':', 1)
-            if len(parts) > 1:
-                title = parts[1].strip()
-            else:
-                title = detail.strip()
+        # מחפש בדיוק: DESCRIPTION: <ערך>
+        m = _re.match(r'^\s*DESCRIPTION\s*:\s*(.+)', detail, _re.IGNORECASE)
+        if m:
+            title = m.group(1).strip()
             break
 
     if not title:
         for detail in row.get('display_list', []):
-            d_up = detail.upper()
-            if 'ITEM NO' in d_up or 'ITEM:' in d_up:
-                parts = detail.split(':', 1)
-                if len(parts) > 1:
-                    title = parts[1].strip()
+            # מחפש: ITEM NO: או ITEM REF: או ITEM:
+            m = _re.match(r'^\s*(?:ITEM\s*(?:NO|REF|NUMBER)?)\s*:\s*(.+)', detail, _re.IGNORECASE)
+            if m:
+                title = m.group(1).strip()
                 break
 
     if not title:
         return ""
 
-    # קיצור אם ארוך מדי
     if len(title) > 60:
         title = title[:57] + "..."
 
