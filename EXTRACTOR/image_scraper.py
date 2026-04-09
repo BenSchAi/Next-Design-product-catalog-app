@@ -12,8 +12,8 @@ import constants
 FOLDER_ID_EXCELS = "1x7bE0YmGhrK_-0f06ixwlOKqquV_8AHZ"
 FOLDER_ID_IMAGES = "1R4nm5cf2NEWB30IceF4cL5oShNlqurPS"
 
-# מספר שורות ריקות רצופות שמסמנות גבול בין מוצרים
-EMPTY_ROWS_THRESHOLD = 1
+# תמונות שה-LeftColumn שלהן גבוה מזה — נחשבות "מחוץ לריבוע" ומדולגות
+MAX_LEFT_COLUMN = 5
 
 
 def get_service():
@@ -26,52 +26,6 @@ def get_service():
     return build('drive', 'v3', credentials=creds)
 
 
-def is_row_empty(sheet, row_idx):
-    """בודק אם שורה מסוימת ריקה לחלוטין."""
-    try:
-        for col_idx in range(sheet.Columns.Count):
-            cell = sheet.Range[row_idx + 1, col_idx + 1]  # Spire is 1-based
-            if cell.Value and str(cell.Value).strip():
-                return False
-        return True
-    except Exception:
-        return True
-
-
-def find_product_blocks(sheet):
-    """
-    מזהה בלוקי מוצרים לפי שורות ריקות.
-    מחזיר רשימה של (start_row, end_row) — 0-based.
-    """
-    total_rows = sheet.Rows.Count
-    blocks = []
-    in_block = False
-    block_start = 0
-    consecutive_empty = 0
-
-    for r in range(total_rows):
-        empty = is_row_empty(sheet, r)
-        if not empty:
-            if not in_block:
-                in_block = True
-                block_start = r
-            consecutive_empty = 0
-        else:
-            if in_block:
-                consecutive_empty += 1
-                if consecutive_empty >= EMPTY_ROWS_THRESHOLD:
-                    # סוף בלוק
-                    blocks.append((block_start, r - consecutive_empty + 1))
-                    in_block = False
-                    consecutive_empty = 0
-
-    # בלוק אחרון אם הגיע לסוף הגיליון
-    if in_block:
-        blocks.append((block_start, total_rows - 1))
-
-    return blocks
-
-
 def process_excels():
     from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
     from spire.xls import Workbook
@@ -81,10 +35,10 @@ def process_excels():
         return
 
     # ══════════════════════════════════════════════════════════════════════
-    # שלב 1 — מחיקת תמונות ישנות (ללא _row_ בשם)
+    # שלב 1 — מחיקת תמונות ישנות (פורמט _N ללא _row_)
     # ══════════════════════════════════════════════════════════════════════
-    print(f"🔍 בודק תמונות ישנות למחיקה...")
-    img_list = service.files().list(
+    print("🔍 בודק תמונות ישנות למחיקה...")
+    all_imgs = service.files().list(
         q=f"'{FOLDER_ID_IMAGES}' in parents",
         fields="files(id, name)",
         supportsAllDrives=True,
@@ -92,16 +46,18 @@ def process_excels():
     ).execute().get('files', [])
 
     deleted = 0
-    for img in img_list:
-        if not re.search(r'_row_\d+', img['name'], re.IGNORECASE):
+    for img in all_imgs:
+        name = img['name']
+        # פורמט ישן: מסתיים ב _N.png (ספרה בלבד, ללא _row_)
+        if re.search(r'_\d+\.png$', name, re.IGNORECASE) and '_row_' not in name.lower():
             try:
                 service.files().delete(
                     fileId=img['id'], supportsAllDrives=True
                 ).execute()
-                print(f"  🗑️  נמחקה: {img['name']}")
+                print(f"  🗑️  נמחקה: {name}")
                 deleted += 1
             except Exception as e:
-                print(f"  ⚠️  לא ניתן למחוק {img['name']}: {e}")
+                print(f"  ⚠️  לא ניתן למחוק {name}: {e}")
     print(f"  ✅ נמחקו {deleted} תמונות ישנות." if deleted else "  ✅ אין תמונות ישנות.")
 
     # ══════════════════════════════════════════════════════════════════════
@@ -139,7 +95,6 @@ def process_excels():
         print(f"\n--- מעבד: {file_name} ---")
 
         try:
-            # הורדה
             ext = file_name.rsplit('.', 1)[-1]
             with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
                 downloader = MediaIoBaseDownload(
@@ -155,42 +110,58 @@ def process_excels():
 
             for sheet_idx in range(workbook.Worksheets.Count):
                 sheet = workbook.Worksheets[sheet_idx]
-                print(f"  📄 גיליון {sheet_idx}: {sheet.Pictures.Count} תמונות")
+                total_pics = sheet.Pictures.Count
+                print(f"  📄 גיליון {sheet_idx}: {total_pics} תמונות")
 
-                if sheet.Pictures.Count == 0:
+                if total_pics == 0:
                     continue
 
-                # ── בניית מיפוי: TopRow → רשימת תמונות ──────────────────
-                # כל תמונה ממוינת לפי שורת ה-top שלה
-                pics_by_row = {}
-                for pic_idx in range(sheet.Pictures.Count):
+                # ── סינון תמונות: רק אלה שבצד שמאל (בתוך הריבוע) ─────────
+                # ממיינות לפי TopRow כדי לשמור סדר עקבי
+                left_pics = []
+                for pic_idx in range(total_pics):
                     pic = sheet.Pictures[pic_idx]
                     try:
-                        top_row = pic.TopRow
+                        left_col = pic.LeftColumn
                     except AttributeError:
                         try:
-                            top_row = pic.Row
+                            left_col = pic.Column
                         except AttributeError:
-                            top_row = pic_idx
-                    pics_by_row.setdefault(top_row, []).append(pic)
+                            left_col = 0
 
-                # ── זיהוי בלוקי מוצרים ───────────────────────────────────
-                blocks = find_product_blocks(sheet)
-                print(f"  📦 נמצאו {len(blocks)} בלוקי מוצרים")
+                    if left_col <= MAX_LEFT_COLUMN:
+                        try:
+                            top_row = pic.TopRow
+                        except AttributeError:
+                            try:
+                                top_row = pic.Row
+                            except AttributeError:
+                                top_row = pic_idx
+                        left_pics.append((top_row, pic_idx, pic))
+                    else:
+                        print(f"  ⏭️  דולגה תמונה חיצונית (col={left_col})")
 
-                for block_start, block_end in blocks:
-                    # כל תמונה שה-TopRow שלה נמצא בתוך הבלוק
-                    block_pics = []
-                    for top_row, pics in sorted(pics_by_row.items()):
-                        if block_start <= top_row <= block_end:
-                            block_pics.extend(pics)
+                # מיון לפי שורה
+                left_pics.sort(key=lambda x: x[0])
 
-                    if not block_pics:
-                        continue
+                # ── קיבוץ תמונות לפי מוצר (TopRow קרוב = אותו מוצר) ──────
+                # תמונות שה-TopRow שלהן בטווח של MAX_ROW_GAP שורות זו מזו
+                # = שייכות לאותו מוצר
+                MAX_ROW_GAP = 20
+                groups = []   # כל group = (first_top_row, [pics])
 
-                    # שמירה: base_row_<block_start>_img_<N>.png
-                    for img_idx, pic in enumerate(block_pics):
-                        img_name = f"{base_name}_row_{block_start}_img_{img_idx}.png"
+                for top_row, pic_idx, pic in left_pics:
+                    if not groups or top_row - groups[-1][0] > MAX_ROW_GAP:
+                        groups.append((top_row, [pic]))
+                    else:
+                        groups[-1][1].append(pic)
+
+                print(f"  📦 {len(groups)} קבוצות מוצרים זוהו")
+
+                # ── שמירה: base_row_<first_top_row>_img_<N>.png ───────────
+                for first_top_row, pics in groups:
+                    for img_idx, pic in enumerate(pics):
+                        img_name = f"{base_name}_row_{first_top_row}_img_{img_idx}.png"
 
                         if img_name.lower() in existing_imgs:
                             print(f"    ✅ {img_name} קיים — מדלג.")
@@ -212,9 +183,9 @@ def process_excels():
                                 media_body=media,
                                 supportsAllDrives=True,
                             ).execute()
-                            print(f"    🚀 הועלה: {img_name}")
+                            print(f"    🚀 הועלה: {img_name}  (row={first_top_row}, img={img_idx})")
                         except Exception as e:
-                            print(f"    ❌ שגיאה בתמונה {img_name}: {e}")
+                            print(f"    ❌ שגיאה: {img_name}: {e}")
                         finally:
                             try:
                                 os.remove(tmp_img_path)
