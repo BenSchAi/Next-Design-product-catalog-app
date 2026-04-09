@@ -1230,6 +1230,11 @@ def apply_filters(df, search_input, filters):
 def main():
     render_page_header()
 
+    # נקה cache בעת אתחול ראשון של session
+    if 'cache_cleared' not in st.session_state:
+        st.cache_data.clear()
+        st.session_state.cache_cleared = True
+
     if 'df' not in st.session_state or 'img_map' not in st.session_state:
         st.session_state.df, st.session_state.img_map = load_all_data()
 
@@ -1241,6 +1246,10 @@ def main():
     search_input = st.text_input(
         "", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)..."
     )
+
+    # DEBUG — יוסר אחרי אבחון
+    st.write(f"🔎 DEBUG: df rows={len(df)}, search='{search_input}', "
+             f"cats={filters['selected_categories']}, mats={filters['selected_materials']}")
 
     should_show = (
         bool(search_input.strip())
