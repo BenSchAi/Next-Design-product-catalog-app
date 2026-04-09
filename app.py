@@ -23,14 +23,14 @@ COLUMNS_PER_ROW   = 4
 COLOR_PRIMARY        = "#1E3A8A"
 COLOR_SIDEBAR_BORDER = "#BFDBFE"
 COLOR_TEXT_DARK      = "#334155"
-COLOR_PRICE          = "#27ae60"   # ירוק — מחיר USD
-COLOR_PRICE_ILS      = "#7C3AED"   # סגול עמוק — מחיר ILS (שונה לחלוטין מהדולר)
+COLOR_PRICE          = "#27ae60"
+COLOR_PRICE_ILS      = "#7C3AED"
 COLOR_DELIVERY       = "#444"
 COLOR_PACKING        = "#666"
 COLOR_OTHER          = "#888"
 COLOR_GENERAL        = "#222"
 COLOR_SAMPLE         = "#d35400"
-COLOR_SOURCE         = "#999"      # אפור בינוני — תאריך / מקור
+COLOR_SOURCE         = "#999"
 COLOR_MOQ_OK         = "#f1c40f"
 COLOR_MOQ_NAN        = "#e74c3c"
 COLOR_TAG_BG         = "#333"
@@ -42,10 +42,9 @@ COLOR_SOURCER_TEXT   = "#3730a3"
 
 FONT_MAIN = "'Arial', sans-serif"
 
-# גובה קבוע לכרטיסיות — אל תשנה ערכים אלה בלי לבדוק את כל ה-layout
-CARD_HEIGHT         = "780px"    # גובה כולל של הכרטיסייה
-CARD_IMAGE_HEIGHT   = "220px"    # גובה תיבת התמונה — קבוע תמיד, overflow:hidden
-CARD_DETAILS_HEIGHT = "280px"    # גובה אזור הטקסט הגלילה (flex-grow:1 + max-height)
+CARD_HEIGHT         = "780px"
+CARD_IMAGE_HEIGHT   = "220px"
+CARD_DETAILS_HEIGHT = "280px"
 
 DEFAULT_USD_ILS = 3.65
 
@@ -154,14 +153,11 @@ main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 </style>
 """, unsafe_allow_html=True)
 
-# JS zoom overlay — components.html מריץ JS בתוך iframe ומגיע ל-window.parent
 import streamlit.components.v1 as components
 components.html("""
 <script>
 (function() {
   var doc = window.parent.document;
-
-  // יוצר את ה-overlay בחלון האב אם לא קיים
   var overlay = doc.getElementById('img-zoom-overlay');
   if (!overlay) {
     overlay = doc.createElement('div');
@@ -171,24 +167,18 @@ components.html("""
     doc.body.appendChild(overlay);
   }
   var overlayImg = overlay.querySelector('img');
-
   var ZOOM_SIZE = 380;
   var MARGIN = 16;
   var hideTimer = null;
-
   function showOverlay(src, rect) {
     clearTimeout(hideTimer);
     overlayImg.src = src;
     var left = rect.right + MARGIN;
     var top  = rect.top + (rect.height / 2) - (ZOOM_SIZE / 2);
-    if (left + ZOOM_SIZE > window.parent.innerWidth - MARGIN) {
-      left = rect.left - ZOOM_SIZE - MARGIN;
-    }
+    if (left + ZOOM_SIZE > window.parent.innerWidth - MARGIN) { left = rect.left - ZOOM_SIZE - MARGIN; }
     if (left < MARGIN) left = MARGIN;
     if (top < MARGIN) top = MARGIN;
-    if (top + ZOOM_SIZE > window.parent.innerHeight - MARGIN) {
-      top = window.parent.innerHeight - ZOOM_SIZE - MARGIN;
-    }
+    if (top + ZOOM_SIZE > window.parent.innerHeight - MARGIN) { top = window.parent.innerHeight - ZOOM_SIZE - MARGIN; }
     overlay.style.width   = ZOOM_SIZE + 'px';
     overlay.style.height  = ZOOM_SIZE + 'px';
     overlay.style.left    = left + 'px';
@@ -196,19 +186,16 @@ components.html("""
     overlay.style.display = 'block';
     requestAnimationFrame(function() { overlay.style.opacity = '1'; });
   }
-
   function hideOverlay() {
     overlay.style.opacity = '0';
     hideTimer = setTimeout(function() { overlay.style.display = 'none'; }, 180);
   }
-
   doc.addEventListener('mouseover', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img || !img.src || img.src.startsWith('data:,')) return;
     var rect = img.getBoundingClientRect();
     showOverlay(img.src, rect);
   });
-
   doc.addEventListener('mouseout', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img) return;
@@ -217,7 +204,6 @@ components.html("""
 })();
 </script>
 """, height=0)
-
 
 
 # =============================================================================
@@ -265,16 +251,9 @@ def extract_moq(details_list):
 
 
 def extract_sourcer(details_list):
-    """
-    חילוץ שם איש הרכש.
-    תומך בפורמטים:
-      'SOURCER: DAISY', 'SOURCER:NANA', 'SOURCER NANA', 'SOURCER:daisy'
-    מחזיר את השם עם אות ראשונה גדולה בלבד (Title Case), למשל 'Daisy'.
-    """
     for detail in details_list:
         if 'SOURCER' not in detail.upper():
             continue
-        # מחפש: SOURCER, אחריה אפשר נקודתיים ו/או רווחים (גם אפס רווחים), אחריה שם
         match = re.search(
             r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
             detail,
@@ -283,47 +262,32 @@ def extract_sourcer(details_list):
         if match:
             name = match.group(1).strip()
             if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
-                return name.capitalize()   # אות ראשונה גדולה בלבד — Daisy
+                return name.capitalize()
     return None
 
 
 def extract_date(details_list):
-    """
-    חילוץ תאריך משורת DATE.
-    תומך בפורמטים:
-      - '25th,mar,2026'  -> '25 mar 2026'
-      - 'DATE: 2024-01-15'
-      - 'DATE 15/01/2024'
-      - 'DATE: Jan 15, 2024'
-    """
     for detail in details_list:
         if 'DATE' not in detail.upper():
             continue
-
-        # פורמט: 25th,mar,2026 או 25,mar,2026
         m = re.search(
             r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
             detail, re.IGNORECASE
         )
         if m:
             return f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
-
-        # פורמט: Jan 15, 2024 או 15 Jan 2024
         m = re.search(
             r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})',
             detail, re.IGNORECASE
         )
         if m:
             return f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
-
-        # פורמטים מספריים: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY
         m = re.search(
             r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
             detail
         )
         if m:
             return m.group(1).strip()
-
     return None
 
 
@@ -349,7 +313,6 @@ def extract_categories(details_list):
 
 
 def extract_min_price(details_list):
-    """מחזיר את המחיר המינימלי (float) שנמצא בשורות מחיר, או None."""
     prices = []
     for detail in details_list:
         d_up = detail.upper()
@@ -357,7 +320,7 @@ def extract_min_price(details_list):
             for match in re.findall(r'\d*\.\d+|\d+', detail):
                 try:
                     val = float(match)
-                    if 0 < val < 10000:   # סינון ערכים סבירים
+                    if 0 < val < 10000:
                         prices.append(val)
                 except:
                     pass
@@ -365,10 +328,6 @@ def extract_min_price(details_list):
 
 
 def extract_price_display(details_list):
-    """
-    מחזיר מחרוזת תצוגה נקייה של שורת המחיר הראשונה שנמצאה,
-    למשל: 'USD 1.50/PC for 3000pcs'
-    """
     for detail in details_list:
         d_up = detail.upper()
         if 'USD' in d_up or 'PRICE' in d_up or '$' in d_up:
@@ -416,17 +375,14 @@ def transform_he_to_en(text):
 
 
 def normalize_text(text):
-    """Lowercase, keep alphanumeric + Hebrew + spaces."""
     if not isinstance(text, str):
         text = str(text)
     return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF ]', ' ', text).lower()
 
 
 def classify_details(display_list):
-    """Split display_list into labeled buckets for rendering."""
     general_info, price_info, packing_info = [], [], []
     delivery_info, sample_info, other_info  = [], [], []
-
     for detail in display_list:
         if contains_chinese(detail):
             continue
@@ -445,7 +401,6 @@ def classify_details(display_list):
             general_info.append(detail)
         else:
             other_info.append(detail)
-
     return general_info, price_info, packing_info, delivery_info, sample_info, other_info
 
 
@@ -483,50 +438,25 @@ def get_image_base64(file_id):
 
 
 def _extract_date_value(raw):
-    """
-    מקבל מחרוזת גולמית שמכילה 'DATE' (כולל כל הטקסט שאחריו).
-    שלב 1 — חותך את כל מה שלפני ואכלול ה-':' או המילה DATE עצמה,
-             ומנקה רווחים ונקודות מהתחלה/סוף.
-    שלב 2 — מחזיר את הערך הנקי כמחרוזת (כפי שנכתב בקובץ), או None.
-    """
-    # חתוך אחרי ':' אם קיים
     if ':' in raw:
         after = raw.split(':', 1)[1]
     else:
-        # חתוך אחרי המילה DATE (באיות כלשהו)
         after = re.split(r'DATE', raw, maxsplit=1, flags=re.IGNORECASE)[-1]
-
     value = after.strip().strip('.')
     return value if value else None
 
 
 def extract_file_header(df_file):
-    """
-    סורק את 20 השורות הראשונות ו-10 העמודות הראשונות של הקובץ.
-    חיפוש case-insensitive + partial match לכל תא שמכיל 'DATE' או 'SOURCER'.
-
-    לוגיקת DATE:
-      - כל תא שמכיל את המילה DATE (בכל צורה) נחשב.
-      - הערך נלקח מכל מה שאחרי ':' (או אחרי המילה DATE אם אין ':').
-      - אם התא ריק אחרי החיתוך, מחפשים בתאים הסמוכים ימינה.
-      - הערך מוצג כפי שנכתב (נקי) — ללא regex על פורמט.
-
-    מחזיר (sourcer_str, date_str) — כל אחד יכול להיות None.
-    """
     sourcer = None
     date    = None
-
     max_rows = min(20, len(df_file))
     max_cols = min(10, len(df_file.columns))
-
     for r in range(max_rows):
         for c in range(max_cols):
             cell = df_file.iloc[r, c]
             if pd.isna(cell):
                 continue
             cell_str = str(cell).strip()
-
-            # --- SOURCER: case-insensitive partial ---
             if sourcer is None and re.search(r'SOURCER', cell_str, re.IGNORECASE):
                 m = re.search(
                     r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
@@ -537,7 +467,6 @@ def extract_file_header(df_file):
                     if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
                         sourcer = name.capitalize()
                 else:
-                    # שם בתא סמוך (עד 2 עמודות ימינה)
                     for dc in range(1, 3):
                         if c + dc < max_cols:
                             nc = df_file.iloc[r, c + dc]
@@ -547,14 +476,11 @@ def extract_file_header(df_file):
                                     if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
                                         sourcer = name.capitalize()
                                         break
-
-            # --- DATE: כל תא שמכיל 'DATE' בכל צורה ---
             if date is None and re.search(r'\bDATE\b', cell_str, re.IGNORECASE):
                 val = _extract_date_value(cell_str)
                 if val:
                     date = val
                 else:
-                    # ערך בתאים הסמוכים ימינה
                     for dc in range(1, 3):
                         if c + dc < max_cols:
                             nc = df_file.iloc[r, c + dc]
@@ -563,10 +489,8 @@ def extract_file_header(df_file):
                                 if candidate:
                                     date = candidate
                                     break
-
             if sourcer and date:
                 return sourcer, date
-
     return sourcer, date
 
 
@@ -598,15 +522,11 @@ def load_all_data():
                 fh, header=None,
                 engine='xlrd' if item['name'].endswith('.xls') else None,
             )
-
-            # --- חילוץ SOURCER ו-DATE ברמת הקובץ (15 שורות ראשונות) ---
             file_sourcer, file_date = extract_file_header(df_file)
-
             skip_until = -1
             for idx in range(len(df_file)):
                 if idx < skip_until:
                     continue
-
                 row_str = " ".join(df_file.iloc[idx].dropna().astype(str))
                 if any(k in row_str.upper() for k in ITEM_TRIGGER_KEYS):
                     details  = []
@@ -629,7 +549,6 @@ def load_all_data():
                                 item_key = line
                     else:
                         skip_until = idx + 25
-
                     if details:
                         full_text_str = " ".join(details)
                         min_p = extract_min_price(details)
@@ -648,8 +567,8 @@ def load_all_data():
                             'capacity':        extract_capacity(full_text_str),
                             'materials':       extract_materials(full_text_str),
                             'categories':      extract_categories(details),
-                            'sourcer':         file_sourcer,   # ← מהכותרת הקובץ
-                            'date':            file_date,       # ← מהכותרת הקובץ
+                            'sourcer':         file_sourcer,
+                            'date':            file_date,
                         })
         except:
             continue
@@ -685,34 +604,20 @@ def _resolve_image_id(row, i, img_map):
 
 
 def _build_image_block_html(img_b64):
-    """
-    Fixed-height image box — ללא date badge (הוסר, מוצג בשורת המטא בלבד).
-    """
     if img_b64:
-        img_tag = (
-            f'<img src="data:image/jpeg;base64,{img_b64}" alt="product image">'
-        )
+        img_tag = f'<img src="data:image/jpeg;base64,{img_b64}" alt="product image">'
     else:
         img_tag = '<span style="color:#ccc; font-size:11px;">📷 לא נמצאה תמונה</span>'
-
     return f'<div class="img-box">{img_tag}</div>'
 
 
 def _build_meta_header_html(row):
-    """
-    שורת מטא בראש הכרטיסייה (מעל התמונה): [Date] | [Sourcer]
-    - אם אין תאריך — מציג 'No Date'
-    - אם אין sourcer — לא מציג את ה-| בכלל
-    - תמיד מוצגת (לא נעלמת)
-    """
     date_str    = row.get('date') or 'No Date'
     sourcer_str = row.get('sourcer')
-
     if sourcer_str:
         content = f"📅 {date_str} &nbsp;|&nbsp; 👤 {sourcer_str}"
     else:
         content = f"📅 {date_str}"
-
     return (
         f"<div style='font-size:10px; color:#888; font-family:Arial,sans-serif; "
         f"margin-bottom:10px; margin-top:0; white-space:nowrap; flex-shrink:0; "
@@ -722,7 +627,6 @@ def _build_meta_header_html(row):
 
 
 def _build_tags_html(row):
-    """Tag strip: MOQ · capacity · sourcer · categories."""
     moq_val = format_moq_display(row['moq'])
     moq_bg  = COLOR_MOQ_NAN if moq_val == "NAN" else COLOR_MOQ_OK
     moq_fg  = "#fff"         if moq_val == "NAN" else "#000"
@@ -731,7 +635,6 @@ def _build_tags_html(row):
         f"border-radius:4px; font-size:11px; font-weight:bold; white-space:nowrap;'>"
         f"📦 MOQ: {moq_val}</span>"
     )
-
     capacity_tag = ""
     if row.get('capacity'):
         capacity_tag = (
@@ -739,15 +642,11 @@ def _build_tags_html(row):
             f"padding:3px 8px; border-radius:4px; font-size:11px; white-space:nowrap;'>"
             f"💧 {row['capacity']}</span>"
         )
-
-    # sourcer tag הוסר — השם מוצג בשורת המטא בלבד (מעל התמונה)
-
     category_tags = "".join(
         f"<span style='background:{COLOR_TAG_BG}; color:#fff; padding:3px 8px; "
         f"border-radius:4px; font-size:11px; white-space:nowrap;'>🏷️ {cat}</span>"
         for cat in (row.get('categories') or [])
     )
-
     return (
         f"<div style='display:flex; flex-wrap:wrap; gap:4px; "
         f"margin-bottom:6px; direction:ltr;'>"
@@ -756,20 +655,10 @@ def _build_tags_html(row):
 
 
 def _build_price_footer_html(row, usd_ils_rate):
-    """
-    FIX 2 + FIX 3:
-    - white-space:normal על שורת המחיר (לא נחתכת יותר)
-    - תצוגה: 💰 <price_display> בירוק | ₪ X.XX בסגול (על אותה שורה)
-    - חישוב ILS מ-min_price בלבד (מספר נקי, לא מהטקסט)
-    - מקור קובץ
-    """
     min_price     = row.get('min_price')
     price_display = row.get('price_display')
-
     price_html = ""
-
     if price_display:
-        # FIX 3: ILS מחושב אך ורק מ-min_price (float נקי)
         ils_part = ""
         if min_price and usd_ils_rate and usd_ils_rate > 0:
             ils_val  = min_price * usd_ils_rate
@@ -777,8 +666,6 @@ def _build_price_footer_html(row, usd_ils_rate):
                 f"&nbsp;<span style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px;'>"
                 f"| ₪&nbsp;{ils_val:.2f}</span>"
             )
-
-        # FIX 2: white-space:normal — שורת המחיר לעולם לא נחתכת
         price_html = (
             f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:14px; "
             f"margin-bottom:3px; line-height:1.5; "
@@ -786,27 +673,17 @@ def _build_price_footer_html(row, usd_ils_rate):
             f"💰 {price_display} {ils_part}"
             f"</div>"
         )
-
-    # מקור קובץ
     meta_html = (
         f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:3px; "
         f"white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>"
         f"📂 {row['file_source']}</div>"
     )
-
-    return (
-        f'<div class="card-footer">'
-        f'{price_html}{meta_html}'
-        f'</div>'
-    )
+    return f'<div class="card-footer">{price_html}{meta_html}</div>'
 
 
 def render_product_card(row, i, img_map, usd_ils_rate):
-    """Render a single product card with fixed-height layout."""
     unique_item_id = f"{row['base_filename']}_{row['row_index']}"
-
     with st.container(border=True):
-        # ── Checkbox ──────────────────────────────────────────────
         is_selected = unique_item_id in st.session_state.selected_items
         if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
             if not is_selected:
@@ -817,18 +694,12 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 del st.session_state.selected_items[unique_item_id]
                 st.rerun()
 
-        # FIX 1: שורת מטא — תאריך + איש רכש מתחת לצ'קבוקס
         meta_header = _build_meta_header_html(row)
-
-        # ── Image ──────────────────────────────────────────────────
         img_id  = _resolve_image_id(row, i, img_map)
         img_b64 = get_image_base64(img_id) if img_id else None
-        img_block = _build_image_block_html(img_b64)
+        img_block   = _build_image_block_html(img_b64)
+        tags_html   = _build_tags_html(row)
 
-        # ── Tags ──────────────────────────────────────────────────
-        tags_html = _build_tags_html(row)
-
-        # ── Details (scrollable, flex-grow) ───────────────────────
         general_info, price_info, packing_info, delivery_info, sample_info, other_info = \
             classify_details(row['display_list'])
 
@@ -858,24 +729,16 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 f"<div style='font-size:11px; color:{COLOR_OTHER};'>• {info}</div>"
             )
 
-        details_html = (
-            f'<div class="card-details">'
-            f'{details_inner}</div>'
-        )
+        details_html = f'<div class="card-details">{details_inner}</div>'
+        footer_html  = _build_price_footer_html(row, usd_ils_rate)
 
-        # ── Price footer ──────────────────────────────────────────
-        footer_html = _build_price_footer_html(row, usd_ils_rate)
-
-        # ── Assemble full card ────────────────────────────────────
         card_html = (
             f'<div style="display:flex; flex-direction:column; '
             f'height:610px; max-height:610px; overflow:hidden; '
             f'direction:ltr; text-align:left;">'
-            f'{meta_header}'
-            f'{img_block}'
+            f'{meta_header}{img_block}'
             f'<div style="flex-shrink:0;">{tags_html}</div>'
-            f'{details_html}'
-            f'{footer_html}'
+            f'{details_html}{footer_html}'
             f'</div>'
         )
         st.markdown(card_html, unsafe_allow_html=True)
@@ -886,7 +749,6 @@ def render_product_card(row, i, img_map, usd_ils_rate):
 # =============================================================================
 
 def _render_cart_section():
-    """Cart section — appears at the TOP of the sidebar."""
     st.markdown(
         f"<div style='font-family:Arial,sans-serif !important;'>"
         f"<h2 style='font-family:Arial,sans-serif !important; color:{COLOR_PRIMARY}; "
@@ -930,13 +792,6 @@ def _render_cart_section():
 
 
 def render_sidebar(df):
-    """
-    סדר הסיידבר:
-      1. עגלת מוצרים
-      2. סינון חכם
-      3. רענון
-    מחזיר dict עם כל ערכי הסינון.
-    """
     with st.sidebar:
 
         # 1. עגלה
@@ -959,10 +814,27 @@ def render_sidebar(df):
         selected_categories = st.multiselect(
             "קטגוריה (Category)", list(CATEGORY_MAP.keys()), placeholder="בחר קטגוריות..."
         )
-        price_min, price_max = st.slider(
-            "טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0,
-            value=(0.0, 200.0), step=0.1,
+
+        # ── טווח מחיר: שני שדות הזנה במקום סקאלה ──────────────────
+        st.markdown(
+            "<p style='font-family:Arial,sans-serif; color:#334155; font-weight:700; "
+            "font-size:15px; text-align:right; direction:rtl; margin-bottom:4px;'>"
+            "טווח מחיר ליח' (USD)</p>",
+            unsafe_allow_html=True,
         )
+        col_min, col_max = st.columns(2)
+        with col_min:
+            price_min = st.number_input(
+                "מינימום", min_value=0.0, value=0.0,
+                step=0.1, format="%.2f",
+            )
+        with col_max:
+            price_max = st.number_input(
+                "מקסימום", min_value=0.0, value=200.0,
+                step=0.1, format="%.2f",
+            )
+        # ────────────────────────────────────────────────────────────
+
         usd_ils_rate = st.number_input(
             "שער דולר (USD/ILS ₪)",
             min_value=0.0, value=DEFAULT_USD_ILS, step=0.01, format="%.2f",
@@ -988,7 +860,6 @@ def render_sidebar(df):
             "נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)..."
         )
 
-        # FIX 1: סינון איש רכש — שמות דינמיים מהנתונים
         available_sourcers = (
             sorted([s for s in df['sourcer'].dropna().unique().tolist() if s])
             if not df.empty else []
@@ -1075,7 +946,6 @@ def render_pagination(total_products):
 # =============================================================================
 
 def apply_filters(df, search_input, filters):
-    """Return filtered + deduplicated DataFrame."""
     results = df.copy()
 
     query = search_input.strip()
