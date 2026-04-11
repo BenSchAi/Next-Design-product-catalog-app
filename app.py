@@ -555,8 +555,8 @@ def extract_file_header(df_file):
             if date is None and re.search(r'\bDATE\b', cell_str, re.IGNORECASE):
                 val = _extract_date_value(cell_str)
                 if val:
-                    date = val
-                else:
+date = _parse_to_uniform_date(val) or val
+else:
                     # ערך בתאים הסמוכים ימינה
                     for dc in range(1, 3):
                         if c + dc < max_cols:
@@ -564,8 +564,8 @@ def extract_file_header(df_file):
                             if not pd.isna(nc):
                                 candidate = str(nc).strip().strip('.')
                                 if candidate:
-                                    date = candidate
-                                    break
+date = _parse_to_uniform_date(candidate) or candidate
+break
 
             if sourcer and date:
                 return sourcer, date
