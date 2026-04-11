@@ -287,43 +287,46 @@ def extract_sourcer(details_list):
     return None
 
 
+MONTH_NAMES = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    'january': 1, 'february': 2, 'march': 3, 'april': 4, 'june': 6,
+    'july': 7, 'august': 8, 'september': 9, 'october': 10,
+    'november': 11, 'december': 12,
+}
+
+def _parse_to_uniform_date(text):
+    t = text.strip()
+    m = re.search(
+        r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
+        t, re.IGNORECASE
+    )
+    if m:
+        month_num = MONTH_NAMES.get(m.group(2).lower())
+        if month_num:
+            return f"{int(m.group(1)):02d}/{month_num:02d}/{m.group(3)}"
+    m = re.search(r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})', t, re.IGNORECASE)
+    if m:
+        month_num = MONTH_NAMES.get(m.group(1).lower())
+        if month_num:
+            return f"{int(m.group(2)):02d}/{month_num:02d}/{m.group(3)}"
+    m = re.search(r'(\d{4})[-/\.](\d{1,2})[-/\.](\d{1,2})', t)
+    if m:
+        return f"{int(m.group(3)):02d}/{int(m.group(2)):02d}/{m.group(1)}"
+    m = re.search(r'(\d{1,2})[-/\.](\d{1,2})[-/\.](\d{4})', t)
+    if m:
+        return f"{int(m.group(1)):02d}/{int(m.group(2)):02d}/{m.group(3)}"
+    return None
+
 def extract_date(details_list):
-    """
-    חילוץ תאריך משורת DATE.
-    תומך בפורמטים:
-      - '25th,mar,2026'  -> '25 mar 2026'
-      - 'DATE: 2024-01-15'
-      - 'DATE 15/01/2024'
-      - 'DATE: Jan 15, 2024'
-    """
     for detail in details_list:
         if 'DATE' not in detail.upper():
             continue
-
-        # פורמט: 25th,mar,2026 או 25,mar,2026
-        m = re.search(
-            r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
-            detail, re.IGNORECASE
-        )
-        if m:
-            return f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
-
-        # פורמט: Jan 15, 2024 או 15 Jan 2024
-        m = re.search(
-            r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})',
-            detail, re.IGNORECASE
-        )
-        if m:
-            return f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
-
-        # פורמטים מספריים: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY
-        m = re.search(
-            r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
-            detail
-        )
-        if m:
-            return m.group(1).strip()
-
+        after = detail.split(':', 1)[1] if ':' in detail else \
+                re.split(r'DATE', detail, maxsplit=1, flags=re.IGNORECASE)[-1]
+        result = _parse_to_uniform_date(after)
+        if result:
+            return result
     return None
 
 
