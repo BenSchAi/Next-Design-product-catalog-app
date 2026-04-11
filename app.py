@@ -296,7 +296,7 @@ MONTH_NAMES = {
 }
 
 def _parse_to_uniform_date(text):
-    t = text.strip()
+    t = text.strip().replace('.', '')
     m = re.search(
         r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
         t, re.IGNORECASE
