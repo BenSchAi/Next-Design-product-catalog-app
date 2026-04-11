@@ -23,14 +23,14 @@ COLUMNS_PER_ROW   = 4
 COLOR_PRIMARY        = "#1E3A8A"
 COLOR_SIDEBAR_BORDER = "#BFDBFE"
 COLOR_TEXT_DARK      = "#334155"
-COLOR_PRICE          = "#27ae60"
-COLOR_PRICE_ILS      = "#7C3AED"
+COLOR_PRICE          = "#27ae60"   # ירוק — מחיר USD
+COLOR_PRICE_ILS      = "#7C3AED"   # סגול עמוק — מחיר ILS (שונה לחלוטין מהדולר)
 COLOR_DELIVERY       = "#444"
 COLOR_PACKING        = "#666"
 COLOR_OTHER          = "#888"
 COLOR_GENERAL        = "#222"
 COLOR_SAMPLE         = "#d35400"
-COLOR_SOURCE         = "#999"
+COLOR_SOURCE         = "#999"      # אפור בינוני — תאריך / מקור
 COLOR_MOQ_OK         = "#f1c40f"
 COLOR_MOQ_NAN        = "#e74c3c"
 COLOR_TAG_BG         = "#333"
@@ -42,9 +42,10 @@ COLOR_SOURCER_TEXT   = "#3730a3"
 
 FONT_MAIN = "'Arial', sans-serif"
 
-CARD_HEIGHT         = "780px"
-CARD_IMAGE_HEIGHT   = "220px"
-CARD_DETAILS_HEIGHT = "280px"
+# גובה קבוע לכרטיסיות — אל תשנה ערכים אלה בלי לבדוק את כל ה-layout
+CARD_HEIGHT         = "780px"    # גובה כולל של הכרטיסייה
+CARD_IMAGE_HEIGHT   = "220px"    # גובה תיבת התמונה — קבוע תמיד, overflow:hidden
+CARD_DETAILS_HEIGHT = "280px"    # גובה אזור הטקסט הגלילה (flex-grow:1 + max-height)
 
 DEFAULT_USD_ILS = 3.65
 
@@ -74,7 +75,7 @@ PACKING_KEYWORDS  = ['OPP BAG', 'POLY BAG', 'PE BAG', 'PACKING', 'MEAS', 'CTN', 
 PRICE_KEYWORDS    = ['USD', 'PRICE']
 PACKING_KEYS      = ['PACKING', 'OPP', 'BOX', 'CTN', 'MEAS', 'G.W', 'N.W', 'KGS']
 DELIVERY_KEYS     = ['DELIVERY', 'DAYS', 'LEAD TIME', 'VALIDITY']
-GENERAL_KEYS      = ['DATE', 'SOURCER']  # ITEM ו-DESCRIPTION מוצגים ככותרת בלבד
+GENERAL_KEYS      = ['DATE', 'SOURCER', 'ITEM', 'DESCRIPTION']
 SKIP_CONTENT_KEYS = ['WEB', 'HTTP', 'HTTPS', 'EXCHANGE RATE', 'FOB', 'PICTURE', 'PRODUCT DETAILS']
 ITEM_TRIGGER_KEYS = ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'DESCRIPTION :']
 
@@ -153,11 +154,14 @@ main {{ overflow-x: hidden !important; max-width: 100vw !important; }}
 </style>
 """, unsafe_allow_html=True)
 
+# JS zoom overlay — components.html מריץ JS בתוך iframe ומגיע ל-window.parent
 import streamlit.components.v1 as components
 components.html("""
 <script>
 (function() {
   var doc = window.parent.document;
+
+  // יוצר את ה-overlay בחלון האב אם לא קיים
   var overlay = doc.getElementById('img-zoom-overlay');
   if (!overlay) {
     overlay = doc.createElement('div');
@@ -167,18 +171,24 @@ components.html("""
     doc.body.appendChild(overlay);
   }
   var overlayImg = overlay.querySelector('img');
+
   var ZOOM_SIZE = 380;
   var MARGIN = 16;
   var hideTimer = null;
+
   function showOverlay(src, rect) {
     clearTimeout(hideTimer);
     overlayImg.src = src;
     var left = rect.right + MARGIN;
     var top  = rect.top + (rect.height / 2) - (ZOOM_SIZE / 2);
-    if (left + ZOOM_SIZE > window.parent.innerWidth - MARGIN) { left = rect.left - ZOOM_SIZE - MARGIN; }
+    if (left + ZOOM_SIZE > window.parent.innerWidth - MARGIN) {
+      left = rect.left - ZOOM_SIZE - MARGIN;
+    }
     if (left < MARGIN) left = MARGIN;
     if (top < MARGIN) top = MARGIN;
-    if (top + ZOOM_SIZE > window.parent.innerHeight - MARGIN) { top = window.parent.innerHeight - ZOOM_SIZE - MARGIN; }
+    if (top + ZOOM_SIZE > window.parent.innerHeight - MARGIN) {
+      top = window.parent.innerHeight - ZOOM_SIZE - MARGIN;
+    }
     overlay.style.width   = ZOOM_SIZE + 'px';
     overlay.style.height  = ZOOM_SIZE + 'px';
     overlay.style.left    = left + 'px';
@@ -186,16 +196,19 @@ components.html("""
     overlay.style.display = 'block';
     requestAnimationFrame(function() { overlay.style.opacity = '1'; });
   }
+
   function hideOverlay() {
     overlay.style.opacity = '0';
     hideTimer = setTimeout(function() { overlay.style.display = 'none'; }, 180);
   }
+
   doc.addEventListener('mouseover', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img || !img.src || img.src.startsWith('data:,')) return;
     var rect = img.getBoundingClientRect();
     showOverlay(img.src, rect);
   });
+
   doc.addEventListener('mouseout', function(e) {
     var img = e.target.closest ? e.target.closest('.img-box img') : null;
     if (!img) return;
@@ -204,6 +217,7 @@ components.html("""
 })();
 </script>
 """, height=0)
+
 
 
 # =============================================================================
@@ -251,9 +265,16 @@ def extract_moq(details_list):
 
 
 def extract_sourcer(details_list):
+    """
+    חילוץ שם איש הרכש.
+    תומך בפורמטים:
+      'SOURCER: DAISY', 'SOURCER:NANA', 'SOURCER NANA', 'SOURCER:daisy'
+    מחזיר את השם עם אות ראשונה גדולה בלבד (Title Case), למשל 'Daisy'.
+    """
     for detail in details_list:
         if 'SOURCER' not in detail.upper():
             continue
+        # מחפש: SOURCER, אחריה אפשר נקודתיים ו/או רווחים (גם אפס רווחים), אחריה שם
         match = re.search(
             r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
             detail,
@@ -262,32 +283,47 @@ def extract_sourcer(details_list):
         if match:
             name = match.group(1).strip()
             if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
-                return name.capitalize()
+                return name.capitalize()   # אות ראשונה גדולה בלבד — Daisy
     return None
 
 
 def extract_date(details_list):
+    """
+    חילוץ תאריך משורת DATE.
+    תומך בפורמטים:
+      - '25th,mar,2026'  -> '25 mar 2026'
+      - 'DATE: 2024-01-15'
+      - 'DATE 15/01/2024'
+      - 'DATE: Jan 15, 2024'
+    """
     for detail in details_list:
         if 'DATE' not in detail.upper():
             continue
+
+        # פורמט: 25th,mar,2026 או 25,mar,2026
         m = re.search(
             r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]+([A-Za-z]{3,9})\s*[,\s]+(\d{4})',
             detail, re.IGNORECASE
         )
         if m:
             return f"{m.group(1)} {m.group(2).capitalize()} {m.group(3)}"
+
+        # פורמט: Jan 15, 2024 או 15 Jan 2024
         m = re.search(
             r'([A-Za-z]{3,9})\s+(\d{1,2})[,\s]+(\d{4})',
             detail, re.IGNORECASE
         )
         if m:
             return f"{m.group(2)} {m.group(1).capitalize()} {m.group(3)}"
+
+        # פורמטים מספריים: YYYY-MM-DD, DD/MM/YYYY, DD.MM.YYYY
         m = re.search(
             r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2}|\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})',
             detail
         )
         if m:
             return m.group(1).strip()
+
     return None
 
 
@@ -313,6 +349,7 @@ def extract_categories(details_list):
 
 
 def extract_min_price(details_list):
+    """מחזיר את המחיר המינימלי (float) שנמצא בשורות מחיר, או None."""
     prices = []
     for detail in details_list:
         d_up = detail.upper()
@@ -320,7 +357,7 @@ def extract_min_price(details_list):
             for match in re.findall(r'\d*\.\d+|\d+', detail):
                 try:
                     val = float(match)
-                    if 0 < val < 10000:
+                    if 0 < val < 10000:   # סינון ערכים סבירים
                         prices.append(val)
                 except:
                     pass
@@ -328,6 +365,10 @@ def extract_min_price(details_list):
 
 
 def extract_price_display(details_list):
+    """
+    מחזיר מחרוזת תצוגה נקייה של שורת המחיר הראשונה שנמצאה,
+    למשל: 'USD 1.50/PC for 3000pcs'
+    """
     for detail in details_list:
         d_up = detail.upper()
         if 'USD' in d_up or 'PRICE' in d_up or '$' in d_up:
@@ -351,83 +392,17 @@ def extract_capacity(full_text):
 
 
 def extract_materials(full_text):
-    """
-    חיפוש מדויק בשורת Material: בלבד.
-    מחזיר רק שמות חומרים אמיתיים — לא מידות, כמויות, תאריכים.
-    """
-    import re as _re
     materials = []
-
-    # חיפוש שורת Material: בלבד (חייבת נקודתיים)
-    mat_match = _re.search(
-        r'(?:^|\n)\s*(?:material|חומר)\s*:\s*(.+?)(?:\n|$)',
-        full_text,
-        _re.IGNORECASE | _re.MULTILINE,
-    )
-    if not mat_match:
-        return []
-
-    raw_val = mat_match.group(1).strip()
-
-    # סינון: אם הערך מכיל מספרים עם יחידות (מידה/כמות) — לא חומר
-    if _re.search(r'\d+\s*(?:mm|cm|pcs|pc|kgs?|g\.?w|n\.?w|\*)', raw_val, _re.IGNORECASE):
-        return []
-
-    # פיצול לפי פסיק / slash
-    for part in _re.split(r'[,/]', raw_val):
-        part = part.strip()
-        if not part or len(part) > 50:
-            continue
-
-        # סינון נוסף: מילים שאינן חומר
-        skip_words = ['usd', 'price', 'exw', 'fob', 'days', 'pcs',
-                      'deposit', 'balance', 'payment', 'sample', 'order']
-        if any(w in part.lower() for w in skip_words):
-            continue
-
-        part_lower = part.lower()
-
-        # מיפוי לשמות סטנדרטיים
-        if 'stainless' in part_lower or '304' in part_lower or '316' in part_lower:
-            materials.append('Stainless Steel')
-        elif 'plastic' in part_lower or _re.search(r'\bpp\b', part_lower) or 'tritan' in part_lower:
-            materials.append('Plastic')
-        elif 'bamboo'   in part_lower: materials.append('Bamboo')
-        elif 'glass'    in part_lower: materials.append('Glass')
-        elif 'silicone' in part_lower: materials.append('Silicone')
-        elif 'ceramic'  in part_lower: materials.append('Ceramic')
-        elif 'tin'      in part_lower or 'tinplate' in part_lower: materials.append('Tin')
-        elif 'aluminum' in part_lower or 'aluminium' in part_lower: materials.append('Aluminum')
-        elif 'wood'     in part_lower or 'wooden'   in part_lower: materials.append('Wood')
-        elif 'leather'  in part_lower: materials.append('Leather')
-        elif 'cotton'   in part_lower: materials.append('Cotton')
-        elif 'rpet'     in part_lower or 'recycled' in part_lower: materials.append('Recycled')
-        elif 'cork'     in part_lower: materials.append('Cork')
-        elif 'wheat'    in part_lower: materials.append('Wheat Straw')
-        elif 'pvc'      in part_lower: materials.append('PVC')
-        elif 'nylon'    in part_lower: materials.append('Nylon')
-        elif 'rubber'   in part_lower: materials.append('Rubber')
-        elif len(part) >= 2:
-            # חומר לא מוכר — שומר כ-Title Case
-            materials.append(part.title())
-
-    return list(dict.fromkeys(materials))
-
-def _extract_date_value(raw):
-    """חותך את הערך אחרי DATE: ומנקה רווחים."""
-    if ':' in raw:
-        after = raw.split(':', 1)[1]
-    else:
-        after = re.split(r'DATE', raw, maxsplit=1, flags=re.IGNORECASE)[-1]
-    value = after.strip().strip('.')
-    return value if value else None
-
-
-def normalize_text(text):
-    """Lowercase, keep alphanumeric + Hebrew + spaces."""
-    if not isinstance(text, str):
-        text = str(text)
-    return re.sub(r'[^a-zA-Z0-9֐-׿ ]', ' ', text).lower()
+    text_lower = full_text.lower()
+    if 'stainless' in text_lower or '304' in text_lower or '316' in text_lower:
+        materials.append('Stainless Steel')
+    if 'plastic' in text_lower or re.search(r'\bpp\b', text_lower) or 'tritan' in text_lower:
+        materials.append('Plastic')
+    if 'bamboo'   in text_lower: materials.append('Bamboo')
+    if 'glass'    in text_lower: materials.append('Glass')
+    if 'silicone' in text_lower: materials.append('Silicone')
+    if 'ceramic'  in text_lower: materials.append('Ceramic')
+    return list(set(materials))
 
 
 def transform_he_to_en(text):
@@ -440,10 +415,18 @@ def transform_he_to_en(text):
     return "".join(he_en_map.get(char, char) for char in text.lower())
 
 
+def normalize_text(text):
+    """Lowercase, keep alphanumeric + Hebrew + spaces."""
+    if not isinstance(text, str):
+        text = str(text)
+    return re.sub(r'[^a-zA-Z0-9\u0590-\u05FF ]', ' ', text).lower()
+
+
 def classify_details(display_list):
     """Split display_list into labeled buckets for rendering."""
     general_info, price_info, packing_info = [], [], []
     delivery_info, sample_info, other_info  = [], [], []
+
     for detail in display_list:
         if contains_chinese(detail):
             continue
@@ -462,55 +445,13 @@ def classify_details(display_list):
             general_info.append(detail)
         else:
             other_info.append(detail)
+
     return general_info, price_info, packing_info, delivery_info, sample_info, other_info
 
-def extract_file_header(df_file):
-    sourcer = None
-    date    = None
-    max_rows = min(20, len(df_file))
-    max_cols = min(10, len(df_file.columns))
-    for r in range(max_rows):
-        for c in range(max_cols):
-            cell = df_file.iloc[r, c]
-            if pd.isna(cell):
-                continue
-            cell_str = str(cell).strip()
-            if sourcer is None and re.search(r'SOURCER', cell_str, re.IGNORECASE):
-                m = re.search(
-                    r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
-                    cell_str, re.IGNORECASE
-                )
-                if m:
-                    name = m.group(1).strip()
-                    if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
-                        sourcer = name.capitalize()
-                else:
-                    for dc in range(1, 3):
-                        if c + dc < max_cols:
-                            nc = df_file.iloc[r, c + dc]
-                            if not pd.isna(nc):
-                                name = str(nc).strip()
-                                if re.match(r'^[A-Za-z\u0590-\u05FF]{2,}$', name):
-                                    if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
-                                        sourcer = name.capitalize()
-                                        break
-            if date is None and re.search(r'\bDATE\b', cell_str, re.IGNORECASE):
-                val = _extract_date_value(cell_str)
-                if val:
-                    date = val
-                else:
-                    for dc in range(1, 3):
-                        if c + dc < max_cols:
-                            nc = df_file.iloc[r, c + dc]
-                            if not pd.isna(nc):
-                                candidate = str(nc).strip().strip('.')
-                                if candidate:
-                                    date = candidate
-                                    break
-            if sourcer and date:
-                return sourcer, date
-    return sourcer, date
 
+# =============================================================================
+# GOOGLE DRIVE SERVICE & DATA LOADING
+# =============================================================================
 
 def get_gdrive_service():
     try:
@@ -530,7 +471,6 @@ def get_image_base64(file_id):
     if not service:
         return None
     try:
-        from googleapiclient.http import MediaIoBaseDownload
         request = service.files().get_media(fileId=file_id, supportsAllDrives=True)
         fh = io.BytesIO()
         downloader = MediaIoBaseDownload(fh, request)
@@ -540,6 +480,94 @@ def get_image_base64(file_id):
         return base64.b64encode(fh.getvalue()).decode('utf-8')
     except:
         return None
+
+
+def _extract_date_value(raw):
+    """
+    מקבל מחרוזת גולמית שמכילה 'DATE' (כולל כל הטקסט שאחריו).
+    שלב 1 — חותך את כל מה שלפני ואכלול ה-':' או המילה DATE עצמה,
+             ומנקה רווחים ונקודות מהתחלה/סוף.
+    שלב 2 — מחזיר את הערך הנקי כמחרוזת (כפי שנכתב בקובץ), או None.
+    """
+    # חתוך אחרי ':' אם קיים
+    if ':' in raw:
+        after = raw.split(':', 1)[1]
+    else:
+        # חתוך אחרי המילה DATE (באיות כלשהו)
+        after = re.split(r'DATE', raw, maxsplit=1, flags=re.IGNORECASE)[-1]
+
+    value = after.strip().strip('.')
+    return value if value else None
+
+
+def extract_file_header(df_file):
+    """
+    סורק את 20 השורות הראשונות ו-10 העמודות הראשונות של הקובץ.
+    חיפוש case-insensitive + partial match לכל תא שמכיל 'DATE' או 'SOURCER'.
+
+    לוגיקת DATE:
+      - כל תא שמכיל את המילה DATE (בכל צורה) נחשב.
+      - הערך נלקח מכל מה שאחרי ':' (או אחרי המילה DATE אם אין ':').
+      - אם התא ריק אחרי החיתוך, מחפשים בתאים הסמוכים ימינה.
+      - הערך מוצג כפי שנכתב (נקי) — ללא regex על פורמט.
+
+    מחזיר (sourcer_str, date_str) — כל אחד יכול להיות None.
+    """
+    sourcer = None
+    date    = None
+
+    max_rows = min(20, len(df_file))
+    max_cols = min(10, len(df_file.columns))
+
+    for r in range(max_rows):
+        for c in range(max_cols):
+            cell = df_file.iloc[r, c]
+            if pd.isna(cell):
+                continue
+            cell_str = str(cell).strip()
+
+            # --- SOURCER: case-insensitive partial ---
+            if sourcer is None and re.search(r'SOURCER', cell_str, re.IGNORECASE):
+                m = re.search(
+                    r'SOURCER\s*:?\s*([A-Za-z\u0590-\u05FF]{2,})',
+                    cell_str, re.IGNORECASE
+                )
+                if m:
+                    name = m.group(1).strip()
+                    if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
+                        sourcer = name.capitalize()
+                else:
+                    # שם בתא סמוך (עד 2 עמודות ימינה)
+                    for dc in range(1, 3):
+                        if c + dc < max_cols:
+                            nc = df_file.iloc[r, c + dc]
+                            if not pd.isna(nc):
+                                name = str(nc).strip()
+                                if re.match(r'^[A-Za-z\u0590-\u05FF]{2,}$', name):
+                                    if name.upper() not in ('NAME', 'BY', 'IS', 'THE'):
+                                        sourcer = name.capitalize()
+                                        break
+
+            # --- DATE: כל תא שמכיל 'DATE' בכל צורה ---
+            if date is None and re.search(r'\bDATE\b', cell_str, re.IGNORECASE):
+                val = _extract_date_value(cell_str)
+                if val:
+                    date = val
+                else:
+                    # ערך בתאים הסמוכים ימינה
+                    for dc in range(1, 3):
+                        if c + dc < max_cols:
+                            nc = df_file.iloc[r, c + dc]
+                            if not pd.isna(nc):
+                                candidate = str(nc).strip().strip('.')
+                                if candidate:
+                                    date = candidate
+                                    break
+
+            if sourcer and date:
+                return sourcer, date
+
+    return sourcer, date
 
 
 @st.cache_data(ttl=600)
@@ -557,10 +585,7 @@ def load_all_data():
 
     all_products = []
 
-    files_found = results.get('files', [])
-    st.write(f"🔎 DEBUG2: נמצאו {len(files_found)} קבצי אקסל בדרייב")
-
-    for item in files_found:
+    for item in results.get('files', []):
         try:
             request = service.files().get_media(fileId=item['id'], supportsAllDrives=True)
             fh = io.BytesIO()
@@ -573,11 +598,15 @@ def load_all_data():
                 fh, header=None,
                 engine='xlrd' if item['name'].endswith('.xls') else None,
             )
+
+            # --- חילוץ SOURCER ו-DATE ברמת הקובץ (15 שורות ראשונות) ---
             file_sourcer, file_date = extract_file_header(df_file)
+
             skip_until = -1
             for idx in range(len(df_file)):
                 if idx < skip_until:
                     continue
+
                 row_str = " ".join(df_file.iloc[idx].dropna().astype(str))
                 if any(k in row_str.upper() for k in ITEM_TRIGGER_KEYS):
                     details  = []
@@ -600,6 +629,7 @@ def load_all_data():
                                 item_key = line
                     else:
                         skip_until = idx + 25
+
                     if details:
                         full_text_str = " ".join(details)
                         min_p = extract_min_price(details)
@@ -618,11 +648,10 @@ def load_all_data():
                             'capacity':        extract_capacity(full_text_str),
                             'materials':       extract_materials(full_text_str),
                             'categories':      extract_categories(details),
-                            'sourcer':         file_sourcer,
-                            'date':            file_date,
+                            'sourcer':         file_sourcer,   # ← מהכותרת הקובץ
+                            'date':            file_date,       # ← מהכותרת הקובץ
                         })
-        except Exception as _e:
-            st.warning(f"שגיאה בקובץ {item.get('name','?')}: {_e}")
+        except:
             continue
 
     img_results = service.files().list(
@@ -640,259 +669,60 @@ def load_all_data():
 # UI COMPONENTS
 # =============================================================================
 
-def _resolve_image_ids(row, img_map):
-    """
-    מחזיר רשימה מסודרת של כל ה-image IDs השייכים למוצר זה.
-    המחלץ שומר: base_row_<first_top_row>_img_<N>.png
-    app.py מחפש לפי row_index שהוא מספר השורה של ITEM/DESCRIPTION.
-    כיוון שהתמונה תמיד מתחילה כמה שורות לפני הטקסט,
-    מחפשים את התמונה הכי קרובה ל-row_index (בטווח סביר).
-    """
+def _resolve_image_id(row, i, img_map):
     base_name_clean = normalize_text(row['base_filename'])
-    row_index       = row['row_index']
-
-    # כל התמונות של הקובץ הזה
-    file_imgs = {
+    valid_images = {
         name: img_id for name, img_id in img_map.items()
         if base_name_clean in normalize_text(name)
     }
-    if not file_imgs:
-        return []
-
-    # חיפוש פורמט חדש: base_row_<R>_img_<N>.png
-    # מחפש את ה-R הכי קרוב ל-row_index (תמונה לפני או ב-row_index)
-    row_nums = set()
-    for name in file_imgs:
-        m = re.search(r'_row_(\d+)_img_', normalize_text(name))
-        if m:
-            row_nums.add(int(m.group(1)))
-
-    if row_nums:
-        # ה-R הכי קרוב שהוא <= row_index + 5
-        candidates = [r for r in row_nums if r <= row_index + 5]
-        if candidates:
-            best_row = max(candidates)  # הכי קרוב מלמטה
-            matched = {
-                name: img_id for name, img_id in file_imgs.items()
-                if f"_row_{best_row}_img_" in normalize_text(name)
-            }
-            def img_sort_key(name):
-                m2 = re.search(r'_img_(\d+)', name, re.IGNORECASE)
-                return int(m2.group(1)) if m2 else 0
-            return [img_id for name, img_id in sorted(matched.items(), key=lambda x: img_sort_key(x[0]))]
-
-    return []
+    if not valid_images:
+        return None
+    row_target = f"row_{row['row_index']}"
+    for name, img_id in valid_images.items():
+        if row_target in normalize_text(name):
+            return img_id
+    return list(valid_images.values())[i % len(valid_images)]
 
 
-def _build_gallery_html(img_ids, card_uid):
+def _build_image_block_html(img_b64):
     """
-    גלריה עם חצים + נקודות + zoom בהover.
-    תומך במובייל (swipe) ובדסקטופ (חצים + hover zoom).
+    Fixed-height image box — ללא date badge (הוסר, מוצג בשורת המטא בלבד).
     """
-    if not img_ids:
-        return '<div class="img-box"><span style="color:#ccc;font-size:11px;">📷 לא נמצאה תמונה</span></div>'
-
-    # טוען את כל התמונות
-    images_b64 = []
-    for img_id in img_ids:
-        b64 = get_image_base64(img_id)
-        if b64:
-            images_b64.append(b64)
-
-    if not images_b64:
-        return '<div class="img-box"><span style="color:#ccc;font-size:11px;">📷 לא נמצאה תמונה</span></div>'
-
-    total = len(images_b64)
-    uid   = card_uid.replace('-', '_').replace('.', '_')
-
-    # בניית תגי img
-    slides_html = ""
-    for idx, b64 in enumerate(images_b64):
-        display = "block" if idx == 0 else "none"
-        slides_html += (
-            f'<img id="gimg_{uid}_{idx}" '
-            f'src="data:image/jpeg;base64,{b64}" '
-            f'alt="product image" '
-            f'style="max-width:100%;max-height:220px;object-fit:contain;'
-            f'border-radius:4px;cursor:zoom-in;display:{display};" '
-            f'class="gallery-img" data-uid="{uid}">'
+    if img_b64:
+        img_tag = (
+            f'<img src="data:image/jpeg;base64,{img_b64}" alt="product image">'
         )
+    else:
+        img_tag = '<span style="color:#ccc; font-size:11px;">📷 לא נמצאה תמונה</span>'
 
-    # חצים — מוצגים רק אם יש יותר מתמונה אחת
-    arrows_html = ""
-    if total > 1:
-        arrows_html = f"""
-        <div onclick="galleryPrev('{uid}')"
-             style="position:absolute;left:4px;top:50%;transform:translateY(-50%);
-                    z-index:10;background:rgba(0,0,0,0.45);color:#fff;
-                    border-radius:50%;width:28px;height:28px;display:flex;
-                    align-items:center;justify-content:center;
-                    cursor:pointer;font-size:16px;user-select:none;">&#8249;</div>
-        <div onclick="galleryNext('{uid}')"
-             style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
-                    z-index:10;background:rgba(0,0,0,0.45);color:#fff;
-                    border-radius:50%;width:28px;height:28px;display:flex;
-                    align-items:center;justify-content:center;
-                    cursor:pointer;font-size:16px;user-select:none;">&#8250;</div>
-        """
-
-    # נקודות — מוצגות רק אם יש יותר מתמונה אחת
-    dots_html = ""
-    if total > 1:
-        dots_inner = ""
-        for idx in range(total):
-            active_style = "background:#555;" if idx == 0 else "background:#ccc;"
-            dots_inner += (
-                f'<span id="gdot_{uid}_{idx}" '
-                f'onclick="galleryGoto(\'{uid}\',{idx})" '
-                f'style="display:inline-block;width:8px;height:8px;border-radius:50%;'
-                f'margin:0 3px;cursor:pointer;transition:background 0.2s;{active_style}"></span>'
-            )
-        dots_html = (
-            f'<div style="text-align:center;padding:4px 0;flex-shrink:0;">'
-            f'{dots_inner}</div>'
-        )
-
-    # counter
-    counter_html = ""
-    if total > 1:
-        counter_html = (
-            f'<div id="gcnt_{uid}" '
-            f'style="position:absolute;bottom:6px;right:8px;'
-            f'background:rgba(0,0,0,0.5);color:#fff;font-size:10px;'
-            f'padding:1px 6px;border-radius:10px;z-index:10;">'
-            f'1/{total}</div>'
-        )
-
-    js = f"""
-<script>
-(function(){{
-  var total_{uid} = {total};
-  var cur_{uid}   = 0;
-
-  window.galleryNext = window.galleryNext || function(uid) {{
-    var fn = window['_galleryNext_' + uid];
-    if (fn) fn();
-  }};
-  window.galleryPrev = window.galleryPrev || function(uid) {{
-    var fn = window['_galleryPrev_' + uid];
-    if (fn) fn();
-  }};
-  window.galleryGoto = window.galleryGoto || function(uid, idx) {{
-    var fn = window['_galleryGoto_' + uid];
-    if (fn) fn(idx);
-  }};
-
-  function show_{uid}(idx) {{
-    var doc = window.parent ? window.parent.document : document;
-    for (var i = 0; i < total_{uid}; i++) {{
-      var el = doc.getElementById('gimg_{uid}_' + i);
-      var dt = doc.getElementById('gdot_{uid}_' + i);
-      if (el) el.style.display = (i === idx) ? 'block' : 'none';
-      if (dt) dt.style.background = (i === idx) ? '#555' : '#ccc';
-    }}
-    var cnt = doc.getElementById('gcnt_{uid}');
-    if (cnt) cnt.textContent = (idx+1) + '/' + total_{uid};
-    cur_{uid} = idx;
-  }}
-
-  window['_galleryNext_' + '{uid}'] = function() {{
-    show_{uid}((cur_{uid} + 1) % total_{uid});
-  }};
-  window['_galleryPrev_' + '{uid}'] = function() {{
-    show_{uid}((cur_{uid} - 1 + total_{uid}) % total_{uid});
-  }};
-  window['_galleryGoto_' + '{uid}'] = function(idx) {{
-    show_{uid}(idx);
-  }};
-
-  // Swipe support
-  var box = (window.parent ? window.parent.document : document).getElementById('gbox_{uid}');
-  if (box) {{
-    var startX = 0;
-    box.addEventListener('touchstart', function(e) {{ startX = e.touches[0].clientX; }}, {{passive:true}});
-    box.addEventListener('touchend', function(e) {{
-      var diff = startX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) > 40) {{
-        if (diff > 0) window['_galleryNext_{uid}']();
-        else          window['_galleryPrev_{uid}']();
-      }}
-    }}, {{passive:true}});
-  }}
-}})();
-</script>
-"""
-
-    return f"""
-<div style="display:flex;flex-direction:column;flex-shrink:0;">
-  <div id="gbox_{uid}"
-       style="width:100%;height:220px;min-height:220px;max-height:220px;
-              overflow:hidden;border-radius:8px;background:#fafafa;
-              display:flex;align-items:center;justify-content:center;
-              position:relative;margin-bottom:4px;">
-    {slides_html}
-    {arrows_html}
-    {counter_html}
-  </div>
-  {dots_html}
-</div>
-{js}
-"""
+    return f'<div class="img-box">{img_tag}</div>'
 
 
 def _build_meta_header_html(row):
+    """
+    שורת מטא בראש הכרטיסייה (מעל התמונה): [Date] | [Sourcer]
+    - אם אין תאריך — מציג 'No Date'
+    - אם אין sourcer — לא מציג את ה-| בכלל
+    - תמיד מוצגת (לא נעלמת)
+    """
     date_str    = row.get('date') or 'No Date'
     sourcer_str = row.get('sourcer')
+
     if sourcer_str:
         content = f"📅 {date_str} &nbsp;|&nbsp; 👤 {sourcer_str}"
     else:
         content = f"📅 {date_str}"
+
     return (
         f"<div style='font-size:10px; color:#888; font-family:Arial,sans-serif; "
-        f"margin-bottom:6px; margin-top:0; white-space:nowrap; flex-shrink:0; "
+        f"margin-bottom:10px; margin-top:0; white-space:nowrap; flex-shrink:0; "
         f"overflow:hidden; text-overflow:ellipsis; direction:ltr; text-align:left;'>"
         f"{content}</div>"
     )
 
 
-def _build_product_title_html(row):
-    """
-    כותרת המוצר — DESCRIPTION בעדיפות, אחר כך ITEM NO / ITEM REF.
-    חיפוש מדויק: השורה חייבת להתחיל ב-DESCRIPTION: או ITEM NO:
-    """
-    import re as _re
-    title = ""
-
-    for detail in row.get('display_list', []):
-        # מחפש בדיוק: DESCRIPTION: <ערך>
-        m = _re.match(r'^\s*DESCRIPTION\s*:\s*(.+)', detail, _re.IGNORECASE)
-        if m:
-            title = m.group(1).strip()
-            break
-
-    if not title:
-        for detail in row.get('display_list', []):
-            # מחפש: ITEM NO: או ITEM REF: או ITEM:
-            m = _re.match(r'^\s*(?:ITEM\s*(?:NO|REF|NUMBER)?)\s*:\s*(.+)', detail, _re.IGNORECASE)
-            if m:
-                title = m.group(1).strip()
-                break
-
-    if not title:
-        return ""
-
-    if len(title) > 60:
-        title = title[:57] + "..."
-
-    return (
-        f"<div style='font-size:13px; font-weight:900; color:#111; "
-        f"margin-bottom:5px; flex-shrink:0; overflow:hidden; "
-        f"text-overflow:ellipsis; white-space:nowrap; direction:ltr;'>"
-        f"{title}</div>"
-    )
-
-
 def _build_tags_html(row):
+    """Tag strip: MOQ · capacity · sourcer · categories."""
     moq_val = format_moq_display(row['moq'])
     moq_bg  = COLOR_MOQ_NAN if moq_val == "NAN" else COLOR_MOQ_OK
     moq_fg  = "#fff"         if moq_val == "NAN" else "#000"
@@ -901,6 +731,7 @@ def _build_tags_html(row):
         f"border-radius:4px; font-size:11px; font-weight:bold; white-space:nowrap;'>"
         f"📦 MOQ: {moq_val}</span>"
     )
+
     capacity_tag = ""
     if row.get('capacity'):
         capacity_tag = (
@@ -908,11 +739,15 @@ def _build_tags_html(row):
             f"padding:3px 8px; border-radius:4px; font-size:11px; white-space:nowrap;'>"
             f"💧 {row['capacity']}</span>"
         )
+
+    # sourcer tag הוסר — השם מוצג בשורת המטא בלבד (מעל התמונה)
+
     category_tags = "".join(
         f"<span style='background:{COLOR_TAG_BG}; color:#fff; padding:3px 8px; "
         f"border-radius:4px; font-size:11px; white-space:nowrap;'>🏷️ {cat}</span>"
         for cat in (row.get('categories') or [])
     )
+
     return (
         f"<div style='display:flex; flex-wrap:wrap; gap:4px; "
         f"margin-bottom:6px; direction:ltr;'>"
@@ -921,10 +756,20 @@ def _build_tags_html(row):
 
 
 def _build_price_footer_html(row, usd_ils_rate):
+    """
+    FIX 2 + FIX 3:
+    - white-space:normal על שורת המחיר (לא נחתכת יותר)
+    - תצוגה: 💰 <price_display> בירוק | ₪ X.XX בסגול (על אותה שורה)
+    - חישוב ILS מ-min_price בלבד (מספר נקי, לא מהטקסט)
+    - מקור קובץ
+    """
     min_price     = row.get('min_price')
     price_display = row.get('price_display')
+
     price_html = ""
+
     if price_display:
+        # FIX 3: ILS מחושב אך ורק מ-min_price (float נקי)
         ils_part = ""
         if min_price and usd_ils_rate and usd_ils_rate > 0:
             ils_val  = min_price * usd_ils_rate
@@ -932,6 +777,8 @@ def _build_price_footer_html(row, usd_ils_rate):
                 f"&nbsp;<span style='color:{COLOR_PRICE_ILS}; font-weight:800; font-size:14px;'>"
                 f"| ₪&nbsp;{ils_val:.2f}</span>"
             )
+
+        # FIX 2: white-space:normal — שורת המחיר לעולם לא נחתכת
         price_html = (
             f"<div style='color:{COLOR_PRICE}; font-weight:900; font-size:14px; "
             f"margin-bottom:3px; line-height:1.5; "
@@ -939,19 +786,27 @@ def _build_price_footer_html(row, usd_ils_rate):
             f"💰 {price_display} {ils_part}"
             f"</div>"
         )
+
+    # מקור קובץ
     meta_html = (
         f"<div style='font-size:10px; color:{COLOR_SOURCE}; margin-top:3px; "
         f"white-space:nowrap; overflow:hidden; text-overflow:ellipsis;'>"
         f"📂 {row['file_source']}</div>"
     )
-    return f'<div class="card-footer">{price_html}{meta_html}</div>'
+
+    return (
+        f'<div class="card-footer">'
+        f'{price_html}{meta_html}'
+        f'</div>'
+    )
 
 
 def render_product_card(row, i, img_map, usd_ils_rate):
+    """Render a single product card with fixed-height layout."""
     unique_item_id = f"{row['base_filename']}_{row['row_index']}"
-    uid_clean      = unique_item_id.replace(' ', '_').replace('.', '_')
 
     with st.container(border=True):
+        # ── Checkbox ──────────────────────────────────────────────
         is_selected = unique_item_id in st.session_state.selected_items
         if st.checkbox("➕ בחר לשליחה", value=is_selected, key=f"chk_{unique_item_id}"):
             if not is_selected:
@@ -962,14 +817,18 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 del st.session_state.selected_items[unique_item_id]
                 st.rerun()
 
+        # FIX 1: שורת מטא — תאריך + איש רכש מתחת לצ'קבוקס
         meta_header = _build_meta_header_html(row)
-        title_html  = _build_product_title_html(row)
 
-        # גלריה — כל התמונות של המוצר
-        img_ids   = _resolve_image_ids(row, img_map)
-        gallery   = _build_gallery_html(img_ids, uid_clean)
+        # ── Image ──────────────────────────────────────────────────
+        img_id  = _resolve_image_id(row, i, img_map)
+        img_b64 = get_image_base64(img_id) if img_id else None
+        img_block = _build_image_block_html(img_b64)
+
+        # ── Tags ──────────────────────────────────────────────────
         tags_html = _build_tags_html(row)
 
+        # ── Details (scrollable, flex-grow) ───────────────────────
         general_info, price_info, packing_info, delivery_info, sample_info, other_info = \
             classify_details(row['display_list'])
 
@@ -999,22 +858,26 @@ def render_product_card(row, i, img_map, usd_ils_rate):
                 f"<div style='font-size:11px; color:{COLOR_OTHER};'>• {info}</div>"
             )
 
-        details_html = f'<div class="card-details">{details_inner}</div>'
-        footer_html  = _build_price_footer_html(row, usd_ils_rate)
+        details_html = (
+            f'<div class="card-details">'
+            f'{details_inner}</div>'
+        )
 
+        # ── Price footer ──────────────────────────────────────────
+        footer_html = _build_price_footer_html(row, usd_ils_rate)
+
+        # ── Assemble full card ────────────────────────────────────
         card_html = (
             f'<div style="display:flex; flex-direction:column; '
-            f'height:640px; max-height:640px; overflow:hidden; '
+            f'height:610px; max-height:610px; overflow:hidden; '
             f'direction:ltr; text-align:left;">'
             f'{meta_header}'
-            f'{title_html}'
-            f'{gallery}'
+            f'{img_block}'
             f'<div style="flex-shrink:0;">{tags_html}</div>'
-            f'{details_html}{footer_html}'
+            f'{details_html}'
+            f'{footer_html}'
             f'</div>'
         )
-        st.markdown(card_html, unsafe_allow_html=True)
-
         st.markdown(card_html, unsafe_allow_html=True)
 
 
@@ -1023,6 +886,7 @@ def render_product_card(row, i, img_map, usd_ils_rate):
 # =============================================================================
 
 def _render_cart_section():
+    """Cart section — appears at the TOP of the sidebar."""
     st.markdown(
         f"<div style='font-family:Arial,sans-serif !important;'>"
         f"<h2 style='font-family:Arial,sans-serif !important; color:{COLOR_PRIMARY}; "
@@ -1066,6 +930,13 @@ def _render_cart_section():
 
 
 def render_sidebar(df):
+    """
+    סדר הסיידבר:
+      1. עגלת מוצרים
+      2. סינון חכם
+      3. רענון
+    מחזיר dict עם כל ערכי הסינון.
+    """
     with st.sidebar:
 
         # 1. עגלה
@@ -1088,27 +959,10 @@ def render_sidebar(df):
         selected_categories = st.multiselect(
             "קטגוריה (Category)", list(CATEGORY_MAP.keys()), placeholder="בחר קטגוריות..."
         )
-
-        # ── טווח מחיר: שני שדות הזנה במקום סקאלה ──────────────────
-        st.markdown(
-            "<p style='font-family:Arial,sans-serif; color:#334155; font-weight:700; "
-            "font-size:15px; text-align:right; direction:rtl; margin-bottom:4px;'>"
-            "טווח מחיר ליח' (USD)</p>",
-            unsafe_allow_html=True,
+        price_min, price_max = st.slider(
+            "טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0,
+            value=(0.0, 200.0), step=0.1,
         )
-        col_min, col_max = st.columns(2)
-        with col_min:
-            price_min = st.number_input(
-                "מינימום", min_value=0.0, value=0.0,
-                step=0.1, format="%.2f",
-            )
-        with col_max:
-            price_max = st.number_input(
-                "מקסימום", min_value=0.0, value=200.0,
-                step=0.1, format="%.2f",
-            )
-        # ────────────────────────────────────────────────────────────
-
         usd_ils_rate = st.number_input(
             "שער דולר (USD/ILS ₪)",
             min_value=0.0, value=DEFAULT_USD_ILS, step=0.01, format="%.2f",
@@ -1125,30 +979,16 @@ def render_sidebar(df):
         available_capacities = (
             sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
         )
-        # רשימת חומרים דינמית — נשאבת מהנתונים + חומרי בסיס קבועים
-        BASE_MATERIALS = [
-            "Stainless Steel", "Plastic", "Bamboo", "Glass",
-            "Silicone", "Ceramic", "Tin", "Aluminum", "Wood",
-            "Leather", "Cotton", "Recycled", "Cork", "Wheat Straw",
-        ]
-        if not df.empty:
-            from_data = [
-                m for mlist in df['materials'].dropna()
-                for m in (mlist if isinstance(mlist, list) else [])
-                if m
-            ]
-            available_materials = sorted(set(BASE_MATERIALS + from_data))
-        else:
-            available_materials = BASE_MATERIALS
         selected_materials = st.multiselect(
             "חומר (Material)",
-            available_materials,
+            ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"],
             placeholder="בחר חומרים...",
         )
         selected_capacities = st.multiselect(
             "נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)..."
         )
 
+        # FIX 1: סינון איש רכש — שמות דינמיים מהנתונים
         available_sourcers = (
             sorted([s for s in df['sourcer'].dropna().unique().tolist() if s])
             if not df.empty else []
@@ -1235,6 +1075,7 @@ def render_pagination(total_products):
 # =============================================================================
 
 def apply_filters(df, search_input, filters):
+    """Return filtered + deduplicated DataFrame."""
     results = df.copy()
 
     query = search_input.strip()
@@ -1286,11 +1127,6 @@ def apply_filters(df, search_input, filters):
 def main():
     render_page_header()
 
-    # נקה cache בעת אתחול ראשון של session
-    if 'cache_cleared' not in st.session_state:
-        st.cache_data.clear()
-        st.session_state.cache_cleared = True
-
     if 'df' not in st.session_state or 'img_map' not in st.session_state:
         st.session_state.df, st.session_state.img_map = load_all_data()
 
@@ -1302,10 +1138,6 @@ def main():
     search_input = st.text_input(
         "", placeholder="🔍 הקלד שם מוצר לחיפוש (או ALL להצגת כל הקטלוג)..."
     )
-
-    # DEBUG — יוסר אחרי אבחון
-    st.write(f"🔎 DEBUG: df rows={len(df)}, search='{search_input}', "
-             f"cats={filters['selected_categories']}, mats={filters['selected_materials']}")
 
     should_show = (
         bool(search_input.strip())
