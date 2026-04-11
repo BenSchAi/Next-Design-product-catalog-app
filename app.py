@@ -327,6 +327,15 @@ def extract_date(details_list):
         result = _parse_to_uniform_date(after)
         if result:
             return result
+            # תאריך ללא שנה — DD/MM
+    m = re.search(
+        r'(\d{1,2})(?:st|nd|rd|th)?\s*[,\s]*([A-Za-z]{3,9})',
+        t, re.IGNORECASE
+    )
+    if m:
+        month_num = MONTH_NAMES.get(m.group(2).lower())
+        if month_num:
+            return f"{int(m.group(1)):02d}/{month_num:02d}"
     return None
 
 
