@@ -412,6 +412,58 @@ def extract_materials(full_text):
             materials.append(part.title())
 
     return list(dict.fromkeys(materials))
+
+def _extract_date_value(raw):
+    """חותך את הערך אחרי DATE: ומנקה רווחים."""
+    if ':' in raw:
+        after = raw.split(':', 1)[1]
+    else:
+        after = re.split(r'DATE', raw, maxsplit=1, flags=re.IGNORECASE)[-1]
+    value = after.strip().strip('.')
+    return value if value else None
+
+
+def normalize_text(text):
+    """Lowercase, keep alphanumeric + Hebrew + spaces."""
+    if not isinstance(text, str):
+        text = str(text)
+    return re.sub(r'[^a-zA-Z0-9֐-׿ ]', ' ', text).lower()
+
+
+def transform_he_to_en(text):
+    he_en_map = {
+        'ש': 'a', 'נ': 'b', 'ב': 'c', 'ג': 'd', 'ק': 'e', 'כ': 'f', 'ע': 'g',
+        'י': 'h', 'ן': 'i', 'ח': 'j', 'ל': 'k', 'ך': 'l', 'צ': 'm', 'מ': 'n',
+        'ם': 'o', 'פ': 'p', '/': 'q', 'ר': 'r', 'ד': 's', 'א': 't', 'ו': 'u',
+        'ה': 'v', 'ס': 'w', 'ז': 'x', 'ט': 'y',
+    }
+    return "".join(he_en_map.get(char, char) for char in text.lower())
+
+
+def classify_details(display_list):
+    """Split display_list into labeled buckets for rendering."""
+    general_info, price_info, packing_info = [], [], []
+    delivery_info, sample_info, other_info  = [], [], []
+    for detail in display_list:
+        if contains_chinese(detail):
+            continue
+        d_up = detail.upper()
+        if 'MOQ' in d_up:
+            continue
+        if any(k in d_up for k in PRICE_KEYWORDS) or '$' in detail:
+            price_info.append(detail)
+        elif any(k in d_up for k in PACKING_KEYS):
+            packing_info.append(detail)
+        elif 'SAMPLE' in d_up and any(k in d_up for k in ['TIME', 'DAY', 'LEAD']):
+            sample_info.append(detail)
+        elif any(k in d_up for k in DELIVERY_KEYS):
+            delivery_info.append(detail)
+        elif any(k in d_up for k in GENERAL_KEYS):
+            general_info.append(detail)
+        else:
+            other_info.append(detail)
+    return general_info, price_info, packing_info, delivery_info, sample_info, other_info
+
 def extract_file_header(df_file):
     sourcer = None
     date    = None
