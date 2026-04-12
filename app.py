@@ -1169,7 +1169,7 @@ def main():
         bool(search_input.strip())
         or bool(filters['selected_categories'])
         or bool(filters['selected_materials'])
-        or bool(filters['selected_capacities'])
+        or bool(filters['capacity_min']) or bool(filters['capacity_max'])
         or bool(filters['selected_sourcers'])
     )
     if df.empty or not should_show:
