@@ -1187,7 +1187,7 @@ def main():
         filters['price_min'], filters['price_max'],
         filters['max_moq'], filters['max_delivery'],
         tuple(filters['selected_materials']),
-        tuple(filters['selected_capacities']),
+        filters['capacity_min'], filters['capacity_max'],
         tuple(filters['selected_sourcers']),
     )
     if st.session_state.last_filters != current_filters:
