@@ -1030,7 +1030,8 @@ def render_sidebar(df):
         max_moq=max_moq,
         max_delivery=max_delivery,
         selected_materials=selected_materials,
-        selected_capacities=selected_capacities,
+        capacity_min=capacity_min,
+        capacity_max=capacity_max,
         selected_sourcers=selected_sourcers,
     )
 
@@ -1126,9 +1127,19 @@ def apply_filters(df, search_input, filters):
             lambda x: any(m in x for m in filters['selected_materials'])
         )]
 
-    if filters['selected_capacities']:
-        results = results[results['capacity'].isin(filters['selected_capacities'])]
-
+    if filters['capacity_min'] or filters['capacity_max']:
+        def cap_in_range(cap):
+            if not cap:
+                return False
+            num = re.findall(r'\d+\.?\d*', str(cap))
+            if not num:
+                return False
+            val = float(num[0])
+            min_ok = float(filters['capacity_min']) <= val if filters['capacity_min'] else True
+            max_ok = val <= float(filters['capacity_max']) if filters['capacity_max'] else True
+            return min_ok and max_ok
+        results = results[results['capacity'].apply(cap_in_range)]
+        
     if filters['selected_sourcers']:
         results = results[results['sourcer'].isin(filters['selected_sourcers'])]
 
