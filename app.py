@@ -971,10 +971,11 @@ def render_sidebar(df):
         selected_categories = st.multiselect(
             "קטגוריה (Category)", list(CATEGORY_MAP.keys()), placeholder="בחר קטגוריות..."
         )
-        price_min, price_max = st.slider(
-            "טווח מחיר ליח' (USD)", min_value=0.0, max_value=200.0,
-            value=(0.0, 200.0), step=0.1,
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+            price_min = st.number_input("מחיר מינימום (USD)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
+        with col2:
+            price_max = st.number_input("מחיר מקסימום (USD)", min_value=0.0, value=200.0, step=0.1, format="%.2f")
         usd_ils_rate = st.number_input(
             "שער דולר (USD/ILS ₪)",
             min_value=0.0, value=DEFAULT_USD_ILS, step=0.01, format="%.2f",
