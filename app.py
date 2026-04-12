@@ -997,9 +997,11 @@ def render_sidebar(df):
             ["Stainless Steel", "Plastic", "Bamboo", "Glass", "Silicone", "Ceramic"],
             placeholder="בחר חומרים...",
         )
-        selected_capacities = st.multiselect(
-            "נפח (Capacity)", available_capacities, placeholder="בחר נפחים (למשל 500ml)..."
-        )
+        col_cap1, col_cap2 = st.columns(2)
+        with col_cap1:
+            capacity_min = st.text_input("נפח מינימום (ml/oz)", placeholder="למשל 250")
+        with col_cap2:
+            capacity_max = st.text_input("נפח מקסימום (ml/oz)", placeholder="למשל 1000")
 
         # FIX 1: סינון איש רכש — שמות דינמיים מהנתונים
         available_sourcers = (
