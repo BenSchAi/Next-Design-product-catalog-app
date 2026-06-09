@@ -84,11 +84,16 @@ ITEM_TRIGGER_KEYS = ['ITEM NO', 'ITEM REF', 'ITEM:', '*ITEM', 'DESCRIPTION:', 'D
 # PAGE SETUP
 # =============================================================================
 
-st.set_page_config(
-    page_title="Next Design - קטלוג חכם",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+# entry.py already calls set_page_config() before exec-ing this file.
+# Streamlit only allows it ONCE per page, so guard against the second call.
+try:
+    st.set_page_config(
+        page_title="Next Design - קטלוג חכם",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+except Exception:
+    pass
 
 if 'selected_items' not in st.session_state:
     st.session_state.selected_items = {}
