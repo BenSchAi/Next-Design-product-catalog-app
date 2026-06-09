@@ -472,9 +472,7 @@ def classify_details(display_list):
 
 def get_gdrive_service():
     try:
-        encoded_key = constants.GCP_SERVICE_ACCOUNT
-        decoded_key = base64.b64decode(encoded_key).decode('utf-8')
-        info  = json.loads(decoded_key)
+        info  = constants.get_service_account_info()
         creds = service_account.Credentials.from_service_account_info(info)
         return build('drive', 'v3', credentials=creds)
     except Exception as e:
