@@ -689,10 +689,27 @@ def _resolve_image_id(row, i, img_map):
     }
     if not valid_images:
         return None
-    row_target = f"row_{row['row_index']}"
+
+    target = row.get('row_index')
+
+    # Parse the anchor row number out of each image name:
+    #   "<base>_row_<N>_img_<k>.png"  ->  N
+    # NOTE: the scraper (Spire.Xls TopRow) and the app (pandas row index)
+    # number rows slightly differently, so we match the CLOSEST row rather
+    # than requiring an exact equality (which almost never held -> the old
+    # code fell back to a wrong modulo image). We also avoid the substring
+    # bug where "row_8" matched "row_80".
+    parsed = []
     for name, img_id in valid_images.items():
-        if row_target in normalize_text(name):
-            return img_id
+        m = re.search(r'row[_\s]+(\d+)', normalize_text(name))
+        if m:
+            parsed.append((int(m.group(1)), img_id))
+
+    if parsed and target is not None:
+        best = min(parsed, key=lambda t: abs(t[0] - target))
+        return best[1]
+
+    # Fallback: no parseable row numbers -> deterministic spread by position
     return list(valid_images.values())[i % len(valid_images)]
 
 
@@ -990,7 +1007,7 @@ def render_sidebar(df):
         )
 
         available_capacities = (
-            sorted([c for c in df['capacity'].unique() if c]) if not df.empty else []
+            sorted([c for c in df['capacity'].unique() if c], key=str) if not df.empty else []
         )
         selected_materials = st.multiselect(
             "חומר (Material)",
@@ -1005,7 +1022,7 @@ def render_sidebar(df):
 
         # FIX 1: סינון איש רכש — שמות דינמיים מהנתונים
         available_sourcers = (
-            sorted([s for s in df['sourcer'].dropna().unique().tolist() if s])
+            sorted([s for s in df['sourcer'].dropna().unique().tolist() if s], key=str)
             if not df.empty else []
         )
         selected_sourcers = st.multiselect(
@@ -1110,9 +1127,14 @@ def apply_filters(df, search_input, filters):
         )]
 
     if filters['price_min'] > 0.0 or filters['price_max'] < 200.0:
-        results = results[results['min_price'].apply(
-            lambda x: x is not None and filters['price_min'] <= x <= filters['price_max']
-        )]
+        pmin, pmax = filters['price_min'], filters['price_max']
+        def _price_ok(x):
+            try:
+                xf = float(x)
+            except (TypeError, ValueError):
+                return False
+            return pmin <= xf <= pmax
+        results = results[results['min_price'].apply(_price_ok)]
 
     if filters['max_moq'] is not None:
         results = results[results['moq'].apply(lambda x: x is None or x <= filters['max_moq'])]
